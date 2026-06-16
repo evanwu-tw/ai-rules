@@ -7,8 +7,9 @@
   GENERATE.md     # 從本系統根目錄複製過來；全域的生成指令即此檔
   role.md         # core：我是誰、角色設定
   tone.md         # core：通用 AI 語氣與產出規範
-  (wiki/、reference/ 視需要再加)
 ```
+
+> **全域 = core-only：不可放子資料夾。** 全域 output 會以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩；按需材料（wiki/reference 等）只用在專案 scope。
 
 填好 `role.md`、`tone.md` 後，叫 agent：
 

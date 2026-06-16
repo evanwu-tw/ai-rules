@@ -12,10 +12,12 @@
 
 | scope | source 位置 | 產出 |
 |---|---|---|
-| 全域 | `~/agent-rules/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md` |
-| 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`<專案>/AGENTS.md`、`<專案>/wiki/`、`<專案>/reference/` |
+| 全域 | `~/agent-rules/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（**僅根檔，core-only**） |
+| 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`<專案>/AGENTS.md`；細節檔 → `<專案>/agent-context/`（avoid 覆蓋 repo 既有資料夾） |
 
 全域只放「我是誰、角色設定、通用 AI 語氣、產出規範」這類很 general 的東西；專案只放專案特有規則。**兩者不重複**——Claude 與 Codex 原生就會自動合併「全域 + 專案」的設定檔。
+
+> **全域 = core-only**：全域 output 走 symlink 跨裝置同步，故全域 source 不放子資料夾。按需材料只用在專案 scope。
 
 ## source 佈局（資料夾即分類）
 
@@ -28,11 +30,11 @@
   generate.md            # 生成指令（全域是 GENERATE.md，專案是 generate.md）
   agent-rules.md   ┐ 頂層 .md = core
   behavior.md      ┘ → 內容「內嵌」進根檔 CLAUDE.md / AGENTS.md
-  <任意資料夾>/*.md       → 各自「拆成」輸出端同名資料夾的獨立檔，根檔只放索引連結
+  <任意資料夾>/*.md       → 拆成 <專案>/agent-context/<同名>/ 的獨立檔，根檔只放索引連結（僅專案 scope）
 ```
 
-- **頂層檔 = 常駐核心**：每次對話都會被讀進 context，所以保持精簡。例外：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md` 是給人看的說明/工具用檔，**不**內嵌。
-- **任何子資料夾 = 按需材料**：資料夾名稱**隨你定**（`wiki/`、`reference/`、`playbooks/`、`design-tokens/`… 不限），各自原樣拆成輸出端同名資料夾。平常不佔 context，根檔只留一行「需要時看 X」，agent 真的需要才去讀（progressive disclosure）。`wiki`、`reference` 只是常見例子，不是固定清單。
+- **頂層檔 = 常駐核心**：每次對話都會被讀進 context，所以保持精簡。例外：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md` 是給人看的說明/工具用檔，**不**內嵌。建議 core 用數字前綴（`00-`、`10-`…）固定內嵌順序，並控制根檔大小（見 `GENERATE.md` §2 大小預算）。
+- **任何子資料夾 = 按需材料**（**僅專案 scope**）：資料夾名稱**隨你定**（`wiki/`、`reference/`、`playbooks/`… 不限），各檔拆成 `<專案>/agent-context/<同名>/` 的獨立檔（收進 namespace，避免覆蓋 repo 既有的 `wiki/`、`docs/`）。平常不佔 context，根檔只留一行「需要時看 X」，agent 真的需要才去讀（progressive disclosure）。全域 scope 不放子資料夾。
 
 ## 怎麼用
 
