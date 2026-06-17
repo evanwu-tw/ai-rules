@@ -1,6 +1,6 @@
 # API Spec（reference 範例）
 
-> 範例 `reference/` 檔：查閱性材料。生成時會被原樣拆成輸出端 `reference/api-spec.md`，根設定檔只放一行索引指向它。需要查 API 細節時才讀。
+> 範例 `reference/` 檔：查閱性材料。生成時會被原樣拆成輸出端 `agent-context/reference/api-spec.md`，根設定檔只放一行索引指向它。需要查 API 細節時才讀。
 
 ## 端點
 

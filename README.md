@@ -39,7 +39,7 @@
 ## 怎麼用
 
 1. **第一次設定全域**：把 `templates/global-agent-rules/` 複製到 `~/agent-rules/`，把 `GENERATE.md` 也放進去，填好你的 role / tone，然後叫 agent「依 `~/agent-rules/GENERATE.md` 生成全域設定檔」。
-2. **某個專案要規則**：把 `templates/project-agent-rules/` 複製成 `<專案>/agent-rules/`，編輯 source，然後叫 agent「依本專案 `agent-rules/generate.md` 生成」。
+2. **某個專案要規則**：把 `templates/project-agent-rules/` 複製成 `<專案>/agent-rules/`，並把 base 規格 `GENERATE.md` vendor 一份進去（`agent-rules/GENERATE.vendored.md`，檔頭註明來源 commit——因為 `ai-rules` 是 private repo，vendored 才能離線/無 auth 使用）。編輯 source，然後叫 agent「依本專案 `agent-rules/generate.md` 生成」。
 3. **要調整**：改 source → 重新叫 agent 生成。詳見 `GENERATE.md` 的「重生」與「迭代回路」章節。
 
 ## 檔案

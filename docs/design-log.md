@@ -48,8 +48,8 @@
 
 | scope | source | 產出 |
 |---|---|---|
-| 全域 | `~/agent-rules/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md` |
-| 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`AGENTS.md`、`wiki/`、`reference/`… |
+| 全域 | `~/agent-rules/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（core-only） |
+| 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`AGENTS.md`；細節檔 → `<專案>/agent-context/…` |
 
 ### source 佈局 → 產出
 
@@ -84,7 +84,7 @@
 - 全裝置規則**一致**（不需裝置差異）→ 全域 output 可進 repo + **symlink** 到 `~/.claude/`、`~/.codex/`，`git pull` 即生效、免重生。
 - 約束：因 symlink，**全域 scope 維持 core-only**（不放子資料夾，避免相對路徑在 symlink 下不穩）。
 - **兩個 repo 分開**：
-  - 系統/範本 repo（本專案，無個人資料，可公開）。
+  - 系統/範本 repo（本專案，無個人資料，但**設為私有**；故專案 base 規格採 vendored 副本、不依賴 private remote）。
   - 個人全域 source `~/agent-rules`（含 role/tone，必須私有，跨裝置同步用）。
 
 ---
@@ -136,3 +136,17 @@
 **另外自行收緊的點**：core 內嵌**依檔名排序**、建議數字前綴（可重現）；§0/§4 強調**保留規則語意、不改寫規則內容**（減少跨 agent 發散）。
 
 **未解（留待步驟 3 驗證）**：symlink 相容性實測；§2 平台大小數字對齊官方文件。
+
+---
+
+## 9. Codex 第二輪 review 與修正（2026-06-17）
+
+第一輪大洞補完後再 review，無新 High，處理剩餘規格邊界與文件殘留：
+
+| 嚴重度 | 發現 | 處理 |
+|---|---|---|
+| Medium | `agent-targeting` 標記與「細節檔 agent 共用」衝突——標記若出現在細節檔，兩 agent 生成會互相覆蓋 | §7 明文：**標記只允許在 core 頂層檔**；細節檔須 agent-neutral；要 agent-specific 細節改用 `agent-context/claude/`、`/codex/` 分路徑 |
+| Medium | §6 manual 簡寫示例 `<!-- agent-rules:manual -->` 錯誤（少 start/end），照抄不會被保留 | 改成引用 §5 的完整 `manual:start`…`manual:end` |
+| Medium-Low | project template 預設 base 指向 GitHub，但 `ai-rules` 設**私有** → 無網路/auth 時拿不到 | 決定 repo **私有**；`generate.md` 預設改用本地 **vendored 副本** `GENERATE.vendored.md`，GitHub 只當更新來源（README 怎麼用 step 2 同步） |
+| Low | 範例細節檔 `api-spec.md` / `design-system.md` 仍寫舊輸出路徑 | 改成 `agent-context/reference/…`、`agent-context/wiki/…` |
+| Low | design-log 舊敘事（§4 輸出、§5「可公開」） | 已更新為 `agent-context` 與「私有」 |

@@ -1,6 +1,6 @@
 # Design System（wiki 範例）
 
-> 範例 `wiki/` 檔：知識性、偶爾才查的材料。生成時會被原樣拆成輸出端 `wiki/design-system.md`，根設定檔只放一行索引指向它。平常不佔 context，agent 需要時才讀。
+> 範例 `wiki/` 檔：知識性、偶爾才查的材料。生成時會被原樣拆成輸出端 `agent-context/wiki/design-system.md`，根設定檔只放一行索引指向它。平常不佔 context，agent 需要時才讀。
 
 ## 色彩
 

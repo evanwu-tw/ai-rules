@@ -4,11 +4,11 @@
 
 ## Base
 
-完整生成程序、agent profile、擁有區機制、迭代回路，一律依**已發佈的規格 `GENERATE.md`**：
+完整生成程序、agent profile、擁有區機制、迭代回路，一律依 base 規格 `GENERATE.md`：
 
-- **預設**：`github.com/evanwu-tw/ai-rules` 的 `GENERATE.md`（建議釘特定 tag/commit 鎖版本）。
-- 本機已同步全域時，也可用 `~/agent-rules/GENERATE.md`。
-- **放進團隊 repo 時**：把該版 `GENERATE.md` vendor 一份進本資料夾（如 `agent-rules/GENERATE.vendored.md`）並鎖版本，避免依賴他人本機路徑或私人規格。
+- **預設（推薦）**：本資料夾內 vendored 的 **`agent-rules/GENERATE.vendored.md`**——從 private repo `github.com/evanwu-tw/ai-rules` 某 commit 複製、**鎖版本**。自包含、離線可用，不依賴網路或 GitHub auth。檔頭請註明來源 commit。
+- **更新來源**：private repo `github.com/evanwu-tw/ai-rules` 的 `GENERATE.md`（有權限時 pull 最新、重新 vendor、更新版本註記）。
+- 本機已同步全域時，亦可直接用 `~/agent-rules/GENERATE.md`。
 
 ## 本專案特有（範例，請改成你的）
 
