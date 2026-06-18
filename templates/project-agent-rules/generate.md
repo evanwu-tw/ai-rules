@@ -7,6 +7,7 @@
 完整生成程序、agent profile、擁有區機制、迭代回路，一律依 base 規格 `GENERATE.md`：
 
 - **預設（推薦）**：本資料夾內 vendored 的 **`agent-rules/GENERATE.vendored.md`**——從 private repo `github.com/evanwu-tw/ai-rules` 某 commit 複製、**鎖版本**。自包含、離線可用，不依賴網路或 GitHub auth。檔頭請註明來源 commit。
+  - **若此檔不存在**：先**停止**，從 `ai-rules` 複製 `GENERATE.md` 成本資料夾的 `GENERATE.vendored.md`（檔頭註明來源 commit）後再繼續。不要拿頂層其他檔當 base。
 - **更新來源**：private repo `github.com/evanwu-tw/ai-rules` 的 `GENERATE.md`（有權限時 pull 最新、重新 vendor、更新版本註記）。
 - 本機已同步全域時，亦可直接用 `~/agent-rules/GENERATE.md`。
 

@@ -150,3 +150,13 @@
 | Medium-Low | project template 預設 base 指向 GitHub，但 `ai-rules` 設**私有** → 無網路/auth 時拿不到 | 決定 repo **私有**；`generate.md` 預設改用本地 **vendored 副本** `GENERATE.vendored.md`，GitHub 只當更新來源（README 怎麼用 step 2 同步） |
 | Low | 範例細節檔 `api-spec.md` / `design-system.md` 仍寫舊輸出路徑 | 改成 `agent-context/reference/…`、`agent-context/wiki/…` |
 | Low | design-log 舊敘事（§4 輸出、§5「可公開」） | 已更新為 `agent-context` 與「私有」 |
+
+---
+
+## 10. Codex 第三輪 review 與修正（2026-06-17）
+
+| 嚴重度 | 發現 | 處理 |
+|---|---|---|
+| High | `GENERATE.vendored.md` 放頂層會被當 core 內嵌、污染根檔 | 加進保留檔名例外（含任何 `*.vendored.md`）——GENERATE.md §2、README 同步 |
+| Medium | agent-specific 細節檔建議（`claude/`、`codex/` 分路徑）與「細節檔共用」矛盾 | 改為**暫不支援**：要 agent-specific 就放回 core 用 agent-targeting（§7） |
+| Low | template 說預設 vendored，但沒附該檔，新專案會卡 | `generate.md` 加「不存在就停止、先從 ai-rules 複製」指示（不附副本以免 drift） |

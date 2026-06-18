@@ -32,7 +32,7 @@
 讀 `agent-rules/` 時，依**位置**決定每個檔的命運。只有兩條通則：
 
 1. **頂層 `.md` 檔** = **core** → 內容**內嵌**進根設定檔（`CLAUDE.md` / `AGENTS.md`）。
-   - **保留檔名例外（不視為 core、不內嵌）**：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md`。這些是給人看的說明或工具用檔，生成時一律略過。
+   - **保留檔名例外（不視為 core、不內嵌）**：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md`、`GENERATE.vendored.md`（以及任何 `*.vendored.md` base 規格副本）。這些是給人看的說明、生成指令或 vendored 規格，**絕不**內嵌進輸出。
    - **順序**：core 內嵌**依檔名排序**。建議用數字前綴（`00-role.md`、`10-style.md`…）確保跨次重生順序穩定。
 2. **子資料夾**（**僅專案 scope**）= 按需材料（資料夾名稱不限——`wiki/`、`reference/`、`playbooks/`… 都行）
    → 各檔輸出到 `<專案>/agent-context/<子資料夾>/<同名>`（含巢狀結構），**agent 共用、近乎逐字複製**；根檔針對每個資料夾放一段索引連結，說明「何時該讀」。
@@ -159,7 +159,9 @@ source 預設是 agent 中立、全部共用。極少數「某段只給特定 ag
 
 生成時：只納入「給自己」或「未標記（共用）」的內容，跳過標記給別人的段落。
 
-**限制：`agent-targeting` 標記只允許出現在 core 頂層檔。** 子資料夾的細節檔必須 **agent-neutral**——細節檔是 agent 共用、近乎逐字複製（§2、§3.6），若把標記放進細節檔，Claude 與 Codex 兩次生成會把同一份 `agent-context/` 覆蓋成不同版本。真的需要 agent-specific 細節時，改用不同輸出路徑（如 source 放 `claude/`、`codex/` 子資料夾 → 輸出 `agent-context/claude/…`、`agent-context/codex/…`），而非在共用細節檔裡用標記。
+**限制：`agent-targeting` 標記只允許出現在 core 頂層檔。** 子資料夾的細節檔必須 **agent-neutral**——細節檔是 agent 共用、近乎逐字複製（§2、§3.6），若把標記放進細節檔，Claude 與 Codex 兩次生成會把同一份 `agent-context/` 覆蓋成不同版本。
+
+**細節檔暫不支援 agent-specific。** 真的需要某段只給某 agent 時，把它放回 **core 頂層檔**、用上面的 `agent: …` 標記，不要放進細節檔。（agent-specific 細節檔之後若有需求再設計，目前刻意不支援以避免規格矛盾。）
 
 ---
 
