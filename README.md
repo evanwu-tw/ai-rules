@@ -10,14 +10,15 @@
 
 ## 兩個 scope
 
-| scope | source 位置 | 產出 |
+| scope | source root 位置 | 產出 |
 |---|---|---|
-| 全域 | `~/agent-rules/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（**僅根檔，core-only**） |
+| 全域 | `~/agent-rules/source/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（**僅根檔，core-only**） |
 | 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`<專案>/AGENTS.md`；細節檔 → `<專案>/agent-context/`（avoid 覆蓋 repo 既有資料夾） |
 
 全域只放「我是誰、角色設定、通用 AI 語氣、產出規範」這類很 general 的東西；專案只放專案特有規則。**兩者不重複**——Claude 與 Codex 原生就會自動合併「全域 + 專案」的設定檔。
 
-> **全域 = core-only**：全域 output 走 symlink 跨裝置同步，故全域 source 不放子資料夾。按需材料只用在專案 scope。
+> **全域 source root 是 `~/agent-rules/source/`**：`~/agent-rules/` 是跨裝置部署 repo，第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）+ `install.sh`，source 收進 `source/`。generator 只讀 `source/`，避免把 output 當 core 內嵌污染。詳見「跨裝置部署」。
+> **全域 = core-only**：全域 output 走 symlink 跨裝置同步，故 `source/` 內不放子資料夾。按需材料只用在專案 scope。
 
 ## source 佈局（資料夾即分類）
 
@@ -38,9 +39,21 @@
 
 ## 怎麼用
 
-1. **第一次設定全域**：把 `templates/global-agent-rules/` 複製到 `~/agent-rules/`，把 `GENERATE.md` 也放進去，填好你的 role / tone，然後叫 agent「依 `~/agent-rules/GENERATE.md` 生成全域設定檔」。
+1. **第一次設定全域**：把 `templates/global-agent-rules/` 複製到 `~/agent-rules/`，把 `GENERATE.md` 放進 `~/agent-rules/source/`，填好 `source/role.md`、`source/tone.md`，叫 agent「依 `~/agent-rules/source/GENERATE.md` 生成全域設定檔」，再跑 `~/agent-rules/install.sh` 建 symlink。詳見「跨裝置部署」。
 2. **某個專案要規則**：把 `templates/project-agent-rules/` 複製成 `<專案>/agent-rules/`，並把 base 規格 `GENERATE.md` vendor 一份進去（`agent-rules/GENERATE.vendored.md`，檔頭註明來源 commit——因為 `ai-rules` 是 private repo，vendored 才能離線/無 auth 使用）。編輯 source，然後叫 agent「依本專案 `agent-rules/generate.md` 生成」。
 3. **要調整**：改 source → 重新叫 agent 生成。詳見 `GENERATE.md` 的「重生」與「迭代回路」章節。
+
+## 跨裝置部署
+
+全域 output 跨裝置完全一致，所以**不該每台重生**——把 `~/agent-rules` 設成**私有 git repo**，output commit 進去、用 symlink 同步：
+
+- **佈局**：`~/agent-rules/` 第一層放 `CLAUDE.md`、`AGENTS.md`（生成 output）+ `install.sh`；source 在 `source/`（`GENERATE.md`、`role.md`、`tone.md`）。
+- **install.sh**：把第一層 output symlink 到 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（idempotent，遇實體檔先備份）。
+- **新裝置一鍵**：`git clone git@github.com:<you>/agent-rules.git ~/agent-rules && ~/agent-rules/install.sh`，**不需重生**。
+- **日常同步**：來源裝置改 source → 重生（指向 `source/GENERATE.md`）→ `git push`；其他裝置 `git pull` 即生效（symlink 自動跟隨）。
+- **這個系統 repo（`ai-rules`）與個人全域 repo（`~/agent-rules`）分開**：前者放範本/規格、不含個資；後者含 role/tone、必須私有。
+
+> **專案 scope 不需這套**：專案的 `CLAUDE.md`/`AGENTS.md`/`agent-context/` 直接 commit 進各專案自己的 repo，新裝置 clone 專案時一起帶過來，不需重生。
 
 ## 檔案
 

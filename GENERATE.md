@@ -14,14 +14,16 @@
 
 ## 1. 兩個 scope
 
-| scope | source | 你要產出的東西 |
+| scope | source（你要讀的 source root） | 你要產出的東西 |
 |---|---|---|
-| 全域 | `~/agent-rules/` | Claude → `~/.claude/CLAUDE.md`；Codex → `~/.codex/AGENTS.md`（**僅根檔，core-only**） |
+| 全域 | `~/agent-rules/source/` | Claude → `~/.claude/CLAUDE.md`；Codex → `~/.codex/AGENTS.md`（**僅根檔，core-only**） |
 | 專案 | `<專案>/agent-rules/` | Claude → `<專案>/CLAUDE.md`；Codex → `<專案>/AGENTS.md`；細節檔 → `<專案>/agent-context/<子資料夾>/`（agent 共用） |
 
 **不要在專案輸出裡重複全域內容。** Claude 與 Codex 原生會自動合併「全域設定檔 + 專案設定檔」，重複只會浪費 context 並造成不同步。
 
-**全域 scope = core-only：** 全域 source **不可放子資料夾**（全域 output 會以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩）。全域只放頂層 core 檔。若全域 source 出現子資料夾，**停下來提醒使用者**，不要自行輸出。
+**全域 source root 是 `~/agent-rules/source/`，不是 `~/agent-rules/`。** `~/agent-rules/` 是跨裝置部署 repo（部署殼），第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）與 `install.sh`。你**只讀 `source/`**、**絕不掃 repo 第一層**——否則會把第一層的 output 當成 core 內嵌，造成自我參照污染。**output 也絕不可寫進 source root。**
+
+**全域 scope = core-only：** 全域 source root（`~/agent-rules/source/`）**不可放子資料夾**（全域 output 會以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩）。全域只放頂層 core 檔。若 source root 出現子資料夾，**停下來提醒使用者**，不要自行輸出。
 
 **專案細節檔收進 namespace：** 專案的子資料夾一律輸出到 `<專案>/agent-context/` 底下的同名資料夾，**絕不**直接寫到專案根（避免覆蓋 repo 既有的 `wiki/`、`docs/` 等）。詳見 §3、§5。
 
@@ -37,7 +39,7 @@
 2. **子資料夾**（**僅專案 scope**）= 按需材料（資料夾名稱不限——`wiki/`、`reference/`、`playbooks/`… 都行）
    → 各檔輸出到 `<專案>/agent-context/<子資料夾>/<同名>`（含巢狀結構），**agent 共用、近乎逐字複製**；根檔針對每個資料夾放一段索引連結，說明「何時該讀」。
    - `wiki/`、`reference/` 只是常見例子，不是固定清單。
-   - **全域 scope 不適用**：全域不可有子資料夾（見 §1）。
+   - **全域 scope 不適用**：全域 source root（`~/agent-rules/source/`）內維持扁平、不可有子資料夾（見 §1）。
 
 > 為什麼分？根設定檔每次對話都被整個讀進 context，要**精簡**。常駐規則內嵌；大份材料拆出去、按需載入（progressive disclosure）。
 
@@ -51,10 +53,10 @@
 
 ## 3. 生成程序（逐步）
 
-1. **確認 scope**：判斷在做全域還是某專案，據此決定 source 與輸出路徑（見 §1）。
-2. **讀全部 source**：讀該 scope `agent-rules/` 底下所有 `.md`（含 `wiki/`、`reference/` 等子資料夾）。
+1. **確認 scope**：判斷在做全域還是某專案，據此決定 source root 與輸出路徑（見 §1）。**全域 source root = `~/agent-rules/source/`**（不是 `~/agent-rules/`）。
+2. **讀全部 source**：讀該 scope source root 底下所有 `.md`（專案含 `wiki/`、`reference/` 等子資料夾；全域只有頂層檔）。**全域時只讀 `source/`，不讀 repo 第一層的 output。**
 3. **讀生成指令**：
-   - 全域：本檔（`~/agent-rules/GENERATE.md`）即指令。
+   - 全域：`~/agent-rules/source/GENERATE.md` 即指令（內容同本檔）。
    - 專案：先讀 `<專案>/agent-rules/generate.md`；它會引用本檔為 base，再補/覆寫專案特有規則。**專案 generate.md 與本檔衝突時，以專案 generate.md 為準。**
 4. **套用你的 agent profile**（見 §4），決定輸出檔名、位置、平台特有段落、語氣。
 5. **組裝根設定檔**：
@@ -167,8 +169,8 @@ source 預設是 agent 中立、全部共用。極少數「某段只給特定 ag
 
 ## 8. 重生 checklist
 
-- [ ] 確認 scope 與輸出路徑正確（§1）
-- [ ] 全域 scope：確認 source 無子資料夾（core-only）；專案 scope：細節檔輸出到 `agent-context/`（§1）
+- [ ] 確認 scope 與輸出路徑正確（§1）；全域 source root = `~/agent-rules/source/`（只讀 `source/`，不掃 repo 第一層 output）
+- [ ] 全域 scope：確認 source root 無子資料夾（core-only）、output 不在 source root；專案 scope：細節檔輸出到 `agent-context/`（§1）
 - [ ] 讀完該 scope 所有 source（§2、§3.2）
 - [ ] 專案：已讀 `generate.md` 且其覆寫優先於本檔（§3.3）
 - [ ] 套用正確 agent profile（§4）

@@ -111,9 +111,9 @@
 - [x] 系統 repo 首次 commit 定版（`c633ce8`），push 到 `git@github.com:evanwu-tw/ai-rules.git`
 
 **待辦 / 下一步**
-- [ ] 步驟 3：乾淨部署全域 `~/agent-rules`（只放 role/tone + GENERATE.md），填內容，跑第一次生成 `~/.claude/CLAUDE.md` 驗證整套運作
-- [ ] 部署時**實測 symlink**：確認 Claude Code / Codex 真的會跟隨 symlink 讀 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`
-- [ ] 建 `~/agent-rules` 私有 repo + `install.sh`（新裝置 clone + symlink）
+- [x] 步驟 3：部署全域 `~/agent-rules`（source 在 `source/`），跑第一次生成驗證整套運作
+- [x] 建 `~/agent-rules` 私有 repo + `install.sh`（新裝置 clone + symlink）→ 見 §11
+- [ ] 部署時**實測 symlink**：確認 Claude Code / Codex 真的會跟隨 symlink 讀 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（§11 已建 symlink，待開新 session 實測讀取）
 - [ ] 視需要補 `CHANGELOG.md`（迭代回路記理由用）
 - [ ] 確認 §2 引用的平台大小數字（Codex AGENTS.md 上限、Claude CLAUDE.md 行數建議）對到最新官方文件
 
@@ -160,3 +160,23 @@
 | High | `GENERATE.vendored.md` 放頂層會被當 core 內嵌、污染根檔 | 加進保留檔名例外（含任何 `*.vendored.md`）——GENERATE.md §2、README 同步 |
 | Medium | agent-specific 細節檔建議（`claude/`、`codex/` 分路徑）與「細節檔共用」矛盾 | 改為**暫不支援**：要 agent-specific 就放回 core 用 agent-targeting（§7） |
 | Low | template 說預設 vendored，但沒附該檔，新專案會卡 | `generate.md` 加「不存在就停止、先從 ai-rules 複製」指示（不附副本以免 drift） |
+
+---
+
+## 11. 跨裝置一鍵部署（2026-06-26）
+
+落實 §5 的跨裝置設計、補完 §7 待辦。痛點：換裝置時全域 `CLAUDE.md`/`AGENTS.md` 沒有同步管道，只能每台重跑 LLM 生成（慢、非確定性）。但全域 output 跨裝置完全一致，不該每台重生。
+
+**定案做法**：`~/agent-rules` 設為**私有 git repo**，生成 output commit 進 repo，用 **symlink + `git pull`** 同步。
+
+| 決策 | 內容 / 理由 |
+|---|---|
+| 同步機制 | **symlink + git pull**：output commit 進 repo，`install.sh` symlink 到 `~/.claude/`、`~/.codex/`。新裝置 `git clone … && ./install.sh` 一鍵完成；他機 `git pull` 即生效、零重生。比「複製腳本」省一步、比「每台重生」省 LLM 與非確定性。 |
+| 佈局：source 收進 `source/`、output 放第一層 | **關鍵約束**：全域 generator 把 source root 頂層 `.md` 都當 core 內嵌；若 output 與 source 同層，重生會把舊 output 當 core 又塞回去 → 自我參照污染（§6 教訓翻版）。解法：source root 改成 `~/agent-rules/source/`，generator 只讀這裡；repo 第一層只放 output + `install.sh`（部署殼）。 |
+| **只動全域、不動專案** | 專案的 source 在 `<專案>/agent-rules/`、output 在專案根，**本來就分層、不污染**；專案 repo 本身就是部署殼，clone 專案即帶 output。故 `source/` 包裝是全域 scope 專屬，GENERATE.md 只改全域那一列。 |
+| 私有 repo 建法 | 本機 `gh` 未安裝 → 走「GitHub 網頁建空 private repo → 本機 `git remote add` + push」；不為此裝新工具。 |
+| `install.sh` 設計 | idempotent；遇擋路的實體檔先備份成 `*.bak.<ts>` 再 `ln -sfn`；路徑用 `BASH_SOURCE` 推算不寫死。 |
+
+**spec 同步**：GENERATE.md §1/§2/§3.1/§8（全域 source root → `source/`、只讀 source/ 不掃第一層、output 不入 source root）；root README 加「跨裝置部署」段；`templates/global-agent-rules/` 重整成 `source/` + `install.sh` + 改寫 README。
+
+**仍待驗證**：symlink 讀取相容性（開新 session 實測 Claude Code / Codex 是否跟隨 symlink 讀設定）；重生是否會把 symlink 換成實體檔（多數寫入 truncate-in-place 保留，需實測，README 已記 caveat）。
