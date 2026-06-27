@@ -115,7 +115,8 @@
 - [x] 建 `~/agent-rules` 私有 repo + `install.sh`（新裝置 clone + symlink）→ 見 §11
 - [ ] 部署時**實測 symlink**：確認 Claude Code / Codex 真的會跟隨 symlink 讀 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（§11 已建 symlink，待開新 session 實測讀取）
 - [ ] 視需要補 `CHANGELOG.md`（迭代回路記理由用）
-- [ ] 確認 §2 引用的平台大小數字（Codex AGENTS.md 上限、Claude CLAUDE.md 行數建議）對到最新官方文件
+- [x] 確認 §2 平台大小數字（Codex `project_doc_max_bytes` 32 KiB、Claude `CLAUDE.md` <200 行）→ 已查證並寫入 GENERATE.md §2（見 §12）
+- [ ] `.claude/rules/` / nested `AGENTS.md` 是否由 generator 輸出 → 決議「**文件化為手動放置選項；generator 支援待決**」（見 §12）
 
 ---
 
@@ -176,6 +177,30 @@
 | **只動全域、不動專案** | 專案的 source 在 `<專案>/agent-rules/`、output 在專案根，**本來就分層、不污染**；專案 repo 本身就是部署殼，clone 專案即帶 output。故 `source/` 包裝是全域 scope 專屬，GENERATE.md 只改全域那一列。 |
 | 私有 repo 建法 | 本機 `gh` 未安裝 → 走「GitHub 網頁建空 private repo → 本機 `git remote add` + push」；不為此裝新工具。 |
 | `install.sh` 設計 | idempotent；遇擋路的實體檔先備份成 `*.bak.<ts>` 再 `ln -sfn`；路徑用 `BASH_SOURCE` 推算不寫死。 |
+
+---
+
+## 12. v0.2 Phase A — 分層邊界 + 精度補強（2026-06-27）
+
+把系統的**產品邊界**寫清楚：agent-rules 是 **instruction + context compiler**，不擴張成 runtime/memory/workflow 的生成器。本輪純文件/規格層。完整 plan 與比較過程見 [agent-rules-v2.md](agent-rules-v2.md)（及 `_archive/` 的 Claude/Codex 收斂草稿）。
+
+**分界線**：本系統只 compile 兩層——Instruction（內嵌根檔）+ Context（→ `agent-context/`）；Runtime / Memory / Workflow 不生成。五層 × 雙平台對照表 canonical 在 README；決策/放置表 canonical 在 GENERATE.md §0。（本檔只記 narrative，不複製這兩張表，守 canonical-per-table。）
+
+**查證事實**（2026-06，以最新官方為準）：
+- Codex 有 hooks、skills（`.agents/skills/SKILL.md`）、plugins、memories、rules——非只有 `AGENTS.md`。
+- **同名不同物**：Codex `~/.codex/rules` = execpolicy 權限（Runtime）≠ Claude `.claude/rules/` = 路徑範圍指令（Context）。Codex 指令 path-scoping 用 nested `AGENTS.md` / `AGENTS.override.md`。
+- Codex `project_doc_max_bytes` 預設 32 KiB（視為合併載入預算、各檔精簡）；Claude `CLAUDE.md` <200 行；Claude `@import` 啟動即載入（非 lazy，≈ 內嵌 Instruction）；Claude 剝除 block-level HTML 註解（banner ≈ 0 成本）。
+
+**決策**：
+- **canonical-per-table**：每張表只有一個權威位置，其餘用指針，避免多檔 drift。
+- **path-scoping**（Claude `.claude/rules/`、Codex nested `AGENTS.md`）＝手動放置選項，**generator 支援待決**、本輪不生成。
+- **memory**：design-log 為跨裝置主記錄；machine-local memory 為輔、非阻塞、不進 repo；長存規則回灌 source。
+- **skills 邊界**：Workflow 層、tool-specific，不由本系統生成或管理；**個人 skills 路徑不寫進中立 spec**（已驗證 `Evan-projects` vs `evan-projects` 大小寫在 Linux 會壞）。
+- Runtime 範例（hook/settings/config 骨架）延後 **Phase B**。
+
+**改動**：GENERATE.md §0（分界線+決策表+hook 候選提醒）、§2（大小數字）、§4（修正 Codex profile「沒有 skills/hooks」舊敘述 + execpolicy 陷阱 + Claude `.claude/rules/` 手動選項）、§5（banner 剝除）、§6（auto-memory 回灌）；README 新增「設定分層」；project template `generate.md`/`behavior.md` 補放置指針。
+
+**R2**：改完 ai-rules 後同步 `~/agent-rules/source/GENERATE.md`（workspace 外、需 approval；未授權則輸出手動指令、不阻塞）。
 
 **spec 同步**：GENERATE.md §1/§2/§3.1/§8（全域 source root → `source/`、只讀 source/ 不掃第一層、output 不入 source root）；root README 加「跨裝置部署」段；`templates/global-agent-rules/` 重整成 `source/` + `install.sh` + 改寫 README。
 

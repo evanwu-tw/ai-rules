@@ -8,6 +8,24 @@
 
 你只維護一份中立的 source。用 Claude 時，叫 Claude 讀 source、產出符合 Claude 慣例的 `CLAUDE.md`；用 Codex 時，叫 Codex 產出 `AGENTS.md`。生成不頻繁——通常一次，之後只在 retro 時回頭調整 source。
 
+## 設定分層（五層模型）
+
+agent 設定可分五層。**本系統只生成前兩層（Instruction + Context）**；其餘三層是各 agent 自己設定的**相鄰層、本系統不生成**。
+
+| Layer | 本系統 | Claude | Codex |
+|---|---|---|---|
+| Instruction（常駐工作指令） | ✅ 生成 | `CLAUDE.md` | `AGENTS.md` |
+| Context（按需 / 路徑範圍） | ✅ 生成 `agent-context/`；path-scoping 為手動選項 | `agent-context`(on-demand) + `.claude/rules/`(glob，路徑觸發) | `agent-context`(on-demand) + nested `AGENTS.md`/`override`(目錄範圍) |
+| Runtime（強制 / 權限 / hook） | ❌ | `settings.json`(權限, hooks) | `config.toml`(hooks, sandbox, approval) + execpolicy `rules` |
+| Memory（自累積學習） | ❌；長存規則回灌 source | auto memory | `[memories]` |
+| Workflow（可重複能力） | ❌ | skills / commands | `.agents/skills` / plugins |
+
+- **`@import` 不算 Context**：Claude `@import` 是 eager（啟動即載入）＝等同內嵌進 Instruction，不是 on-demand；progressive disclosure 一律用一般 markdown 連結指向 `agent-context/`。
+- **path-scoping 是手動選項**：Claude `.claude/rules/`（可 glob）↔ Codex nested `AGENTS.md` / `AGENTS.override.md`（目錄範圍）都**不由本系統生成**，需要時自行建立。
+- **同名不同物**：Codex `rules`（execpolicy 權限，Runtime 層）≠ Claude `.claude/rules/`（路徑範圍指令，Context 層）。
+- **skills / plugins** 屬 Workflow 層；其安裝、快取、載入位置屬 **tool-specific，不由本系統生成或管理**。
+- **「什麼放哪」的決策表** canonical 在 `GENERATE.md §0`（要強制 → hook；要 path-scoped → 手動 rules/nested；個人偏好 → memory…）。
+
 ## 兩個 scope
 
 | scope | source root 位置 | 產出 |
