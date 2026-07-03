@@ -228,3 +228,25 @@
 **下一輪優化的邊界提醒**（Codex 交叉 review 後確認）：GENERATE.md 只補「不生成的理由」與 hook/subagent 候選提醒，**不加生成 runtime config 的流程**；README 表 A 維持現狀、不加 subagent row；design-log 維持決策紀錄定位、不變成第二份 spec。
 
 **Sources**：developers.openai.com/codex 的 `hooks`、`guides/agents-md`、`subagents`、`config-reference`；Claude 側對照：code.claude.com/docs 的 `sub-agents`、`hooks`。
+
+---
+
+## 14. §13 查證落地：spec 精度與一致性修正（2026-07-03）
+
+把 §13 的查證事實落回使用者查閱動線（GENERATE.md、README、templates），守 §13 邊界提醒。本輪純措辭/精度，不改產品邊界。
+
+**改動**：
+- GENERATE.md §0：補「Runtime/Memory/Workflow 為什麼不生成」段（核心理由：三層跨平台**語意不等價**，單一 source 硬 compile 只會產生假等價）；表 B 加 subagent 列；hook 候選提醒補 Codex `hooks.json` 精度；新增 subagent 候選提醒。
+- GENERATE.md §2：AGENTS.md 32 KiB 預算補「root 往下串接、達上限截停、深層檔先被丟」精度。
+- GENERATE.md §4：Claude profile 平台特有段落補 subagents；Codex profile 補 nested `AGENTS.md` 合併精度（每目錄取一檔、`AGENTS.override.md` 優先、近者覆蓋）、hooks 位置、subagents（明點、不自動路由）、**path-scoping 降級提醒**（跨目錄 glob → root `AGENTS.md` 文字描述，無機制保證）。
+- README：表 A Runtime 列 Codex 欄補 `hooks.json`（只改 cell、不加列）；path-scoping bullet 加降級策略指針 → GENERATE.md §4。
+- templates/project generate.md：不生成清單補 subagent。
+
+**決策**：
+- **表 B 加 subagent 列、表 A 不加**：§13 邊界只凍結表 A；表 B 的目的是窮舉「什麼放哪」，subagent 是真實放置問題，缺列比擴張解讀風險更實質。加的是 ❌ 列，不改 Phase A 邊界。
+- **降級策略 canonical 落 §4 Codex profile**，README 只放指針（canonical-per-rule）。措辭限定「手動搬移時的提醒」，不是 generator 行為。
+- 這些改動服務的是**生成/review/搬規則時刻**的 compiler agent 與人，不改變日常 session 行為——與系統定位一致。
+
+**邊界確認**：未加生成 runtime config 流程；未複製任何 canonical 表；已 vendor 的 `GENERATE.vendored.md` 屬鎖版本設計，不追改。
+
+**R2**：GENERATE.md 已改 → 需同步 `~/agent-rules/source/GENERATE.md`（workspace 外；未授權則手動 `cp GENERATE.md ~/agent-rules/source/GENERATE.md` 後 commit）。

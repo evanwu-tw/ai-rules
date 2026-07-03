@@ -18,6 +18,8 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 - ✅ **Context**（按需 / 路徑範圍資料）→ 拆到 `agent-context/`（僅專案）。
 - ❌ **Runtime**（hook / 權限 / sandbox / config）、**Memory**（agent 自累積記憶）、**Workflow**（skill / command / plugin）——這三層是各 agent 自己設定的**相鄰層，本系統不生成**。
 
+> **為什麼不生成**：這三層**跨平台語意不等價**——hook 的 trust 模型與事件集不同（Codex 非 managed hook 需 review + trust、企業 managed hooks 為其特有）；subagent 核心語意不對映（Claude 依 description 自動路由 vs Codex 需使用者明點；Claude per-subagent `tools:` 白名單在 Codex 只能降級為 `sandbox_mode` / `mcp_servers` 粗粒度）；memory 是 machine-local 的非確定性累積。單一中立 source 無法 compile 出跨平台等價的生成物，硬做只會產生假等價。故維持不生成，只在放置表與 reviewer 提醒標示候選。（查證紀錄：本 repo `docs/design-log.md` §13。）
+
 （五層 × 雙平台完整對照見 README「設定分層」。）
 
 ### 決策 / 放置表（canonical 在此）
@@ -30,8 +32,11 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 | 強制、可程式檢查/事件觸發 | hook / 權限（`settings.json` / `config.toml`；Codex execpolicy `rules`）| ❌ |
 | 個人偏好 / 歷史脈絡 | memory（不取代 source；長存才回灌）| ❌ |
 | 多步驟、可重複 workflow | skill / command / plugin | ❌ |
+| 交給特定角色執行的可重複任務 | subagent：Claude `.claude/agents/`；Codex `.codex/agents/`（語意不等價，見 §4）| ❌（手動）|
 
-> **reviewer 提醒**：core 規則若帶「必須／絕不／每次」等強制語氣、且能被程式檢查或事件觸發驗證，它其實是 **hook 候選**——提醒使用者改用 hook（`settings.json` / `config.toml`），不要只寫成 markdown 規則（模型不保證遵守）。
+> **reviewer 提醒（hook）**：core 規則若帶「必須／絕不／每次」等強制語氣、且能被程式檢查或事件觸發驗證，它其實是 **hook 候選**——提醒使用者改用 hook（Claude `settings.json`；Codex `hooks.json` / `config.toml`），不要只寫成 markdown 規則（模型不保證遵守）。
+
+> **reviewer 提醒（subagent）**：core 規則若描述「交給特定角色執行的可重複任務」（reviewer、測試代理…），它是 **subagent 候選**——提醒使用者到各平台自建（Claude `.claude/agents/`、Codex `.codex/agents/`），並注意兩平台語意不等價（Claude 自動路由 vs Codex 明點、`tools:` 白名單無 Codex 對應）。本系統不生成。
 
 ---
 
@@ -71,7 +76,7 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 根檔（`CLAUDE.md` / `AGENTS.md`）必須小：
 - **目標數字**（2026-06 查證，以各自最新官方文件為準）：
   - Claude `CLAUDE.md` 目標 **< ~200 行**。
-  - Codex `AGENTS.md` 合併載入受 `project_doc_max_bytes` 約束（**預設 32 KiB**）；**防呆**：視為 global + project + nested 的合併載入預算，**每份 `AGENTS.md` 都要精簡**，避免擠掉後續 instruction。
+  - Codex `AGENTS.md` 合併載入受 `project_doc_max_bytes` 約束（**預設 32 KiB**）；**防呆**：視為 global + project + nested 的合併載入預算，**每份 `AGENTS.md` 都要精簡**，避免擠掉後續 instruction（串接由 root 往下、達上限即**截停**——超額時愈深層、愈專案特有的檔先被丟）。
   - Claude `@import` **啟動即載入、不省 context**；要 progressive disclosure 一律用一般 markdown 連結指向 `agent-context/`（別用 `@import` 充當按需）。
 - **硬規則**：若 core 內嵌後根檔過大，**先把可拆的內容移到子資料夾**（變按需材料）；仍無法縮小就**停下來提醒使用者**，不要硬塞一個超大的根檔。
 
@@ -107,7 +112,7 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 - **原生合併**：Claude Code 會自動載入 `~/.claude/CLAUDE.md`（user）+ 專案 `CLAUDE.md` + 子目錄的巢狀 `CLAUDE.md`。所以**專案檔不要重抄全域**。
 - **連結方式**：用**一般 markdown 相對連結**指向 `agent-context/` 底下的細節檔（要的是「按需才讀」）。**不要**用 `@path` import 語法指它們——`@import` 是 **eager（啟動即載入）＝等同內嵌進 Instruction**，會破壞 progressive disclosure。`@import` 只在你「真的想要某段每次都載入」時才用。
 - **path-scoping（選配、手動）**：`.claude/rules/`（可帶 `paths:` frontmatter 做 glob 範圍載入）是 Claude 獨有的選項，**屬手動放置、本系統不生成**。需要時由使用者自行建立。
-- **平台特有段落**：可提及 skills、hooks、slash commands、MCP（若 source 有相關規則）。但這些屬 Runtime/Workflow 層、**本系統不生成**——只在 source 有相關「指示」時改寫成一般說明，不要無中生有。
+- **平台特有段落**：可提及 skills、hooks、slash commands、subagents（`.claude/agents/`）、MCP（若 source 有相關規則）。但這些屬 Runtime/Workflow 層、**本系統不生成**——只在 source 有相關「指示」時改寫成一般說明，不要無中生有。
 - **語氣**：祈使句、精簡、條列。
 
 ### Codex profile
@@ -115,8 +120,8 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 - **輸出檔**：專案 `AGENTS.md`（專案根）／全域 `~/.codex/AGENTS.md`。
 - **原生合併**：Codex 會由內而外合併目錄樹上的 `AGENTS.md` 與全域 `~/.codex/AGENTS.md`。所以**專案檔不要重抄全域**。
 - **連結方式**：用一般 markdown 相對連結指向 `agent-context/` 底下的細節檔。
-- **path-scoping（選配、手動）**：Codex 指令的路徑/目錄範圍用 **nested `AGENTS.md` / `AGENTS.override.md`**（由 root 往 cwd 逐層合併、每目錄最多一檔），**屬手動放置、本系統不生成**。
-- **平台特有段落**：Codex **有** hooks、skills（`.agents/skills`）、plugins、memories、execpolicy `rules`——但它們屬 **Runtime / Workflow / Memory 層、本系統不生成**。`AGENTS.md` 本身只是 instruction file，對應內容請改寫成一般說明或省略。**注意：Codex `rules`（execpolicy 權限）≠ Claude `.claude/rules/`（路徑範圍指令），同名不同物，勿混。**
+- **path-scoping（選配、手動）**：Codex 指令的路徑/目錄範圍用 **nested `AGENTS.md` / `AGENTS.override.md`**（由 root 往 cwd 逐層串接、近者覆蓋；每目錄取一檔，`AGENTS.override.md` 優先），**屬手動放置、本系統不生成**。**降級提醒（手動搬移時）**：Claude `.claude/rules/` 的 glob 可跨目錄；nested `AGENTS.md` 只有「所在目錄」範圍。跨目錄的 path-scoped 規則搬到 Codex 時，降級為寫進 root `AGENTS.md`、以文字描述適用範圍（無機制保證，靠模型遵守）。
+- **平台特有段落**：Codex **有** hooks（`hooks.json` / `config.toml`）、subagents（`.codex/agents/`，需使用者明點、不自動路由）、skills（`.agents/skills`）、plugins、memories、execpolicy `rules`——但它們屬 **Runtime / Workflow / Memory 層、本系統不生成**。`AGENTS.md` 本身只是 instruction file，對應內容請改寫成一般說明或省略。**注意：Codex `rules`（execpolicy 權限）≠ Claude `.claude/rules/`（路徑範圍指令），同名不同物，勿混。**
 - **語氣**：直白、直接、條列。
 
 > 未來新增 agent（Cursor / Windsurf 等）：在此新增一段 profile 即可，其餘機制不變。
