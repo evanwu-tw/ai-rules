@@ -205,3 +205,26 @@
 **spec 同步**：GENERATE.md §1/§2/§3.1/§8（全域 source root → `source/`、只讀 source/ 不掃第一層、output 不入 source root）；root README 加「跨裝置部署」段；`templates/global-agent-rules/` 重整成 `source/` + `install.sh` + 改寫 README。
 
 **仍待驗證**：symlink 讀取相容性（開新 session 實測 Claude Code / Codex 是否跟隨 symlink 讀設定）；重生是否會把 symlink 換成實體檔（多數寫入 truncate-in-place 保留，需實測，README 已記 caveat）。
+
+---
+
+## 13. Claude/Codex 機制細節查證（2026-07-03）
+
+重新查證 §12 的事實並補足細節層（官方文件 developers.openai.com/codex，2026-07-03 時點）。§12 結論全部仍成立。五層對照見 README 表 A、放置決策見 GENERATE.md §0；本節只記新查證細節，不複製表。
+
+**Codex hooks 細節**（§12 只記到「有 hooks」的存在層級）：
+- 位置：`~/.codex/hooks.json` 或 `config.toml` inline `[[hooks.*]]`（user 層）；`<repo>/.codex/hooks.json`（專案層）；plugin 內建；企業 `requirements.toml`（managed、使用者關不掉）。多來源並存時全部載入。
+- 事件與 Claude Code 幾乎一對一：PreToolUse、PostToolUse、PermissionRequest、UserPromptSubmit、SessionStart、Stop、PreCompact/PostCompact、SubagentStart/Stop。
+- 強制力：PreToolUse 回傳 `{"permissionDecision": "deny", ...}` 或 exit code 2 + stderr 可擋下工具呼叫；PostToolUse 只能 `decision: "block"` 標記、無法回滾。非 managed 的 command hook 需先 review + trust 才會執行。
+- 含意：核心事件可對映（Codex 的事件名與 `permissionDecision` schema 明顯沿襲 Claude），但 **trust 模型與事件集不等價**——Codex 非 managed hook 需 review + trust、企業 managed hooks 為其特有。Phase B 若做 runtime 範例，**只做平台別範例，不做單一來源等價生成**。
+
+**Codex subagents**（本 repo 首次記錄）：
+- 定義：`~/.codex/agents/`（個人）、`.codex/agents/`（專案）下的 TOML，一檔一 agent。必填 `name`、`description`、`developer_instructions`；選配 `model`、`model_reasoning_effort`、`sandbox_mode`、`mcp_servers`、`skills.config`、`nickname_candidates`；省略欄位繼承 parent session。
+- 與 Claude 的關鍵差異：(a) **Codex 不 auto-delegate**——使用者明講才 spawn，vs Claude 主 agent 讀 `.claude/agents/` frontmatter description 自動路由；(b) Codex 沒有 Claude 那種 per-subagent `tools:` 白名單，能力控制主要落在 `sandbox_mode`（read-only / workspace-write）、`mcp_servers` 與 config；(c) Codex `[agents]` 全域設定 `max_threads`(預設 6)、`max_depth`(預設 1)、`job_max_runtime_seconds`(預設 1800)，並有 `spawn_agents_on_csv` 宣告式批次。
+- **決策：subagent 屬 Runtime/Workflow 層、不 compile**——Claude 定義的核心價值（description 自動路由）在 Codex 側直接失效，`tools:` 白名單也只能降級成 `sandbox_mode` / `mcp_servers` 的粗粒度控制。維持 Phase A 邊界，表 A 不加列。
+
+**AGENTS.md 解析補充**（對 §12 的 32 KiB 事實加精度）：每層取一檔，優先序 `AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames` 註冊的替代檔名；由 root 往下串接、近者覆蓋、跳過空檔、達 `project_doc_max_bytes`（預設 32 KiB）即截停。
+
+**下一輪優化的邊界提醒**（Codex 交叉 review 後確認）：GENERATE.md 只補「不生成的理由」與 hook/subagent 候選提醒，**不加生成 runtime config 的流程**；README 表 A 維持現狀、不加 subagent row；design-log 維持決策紀錄定位、不變成第二份 spec。
+
+**Sources**：developers.openai.com/codex 的 `hooks`、`guides/agents-md`、`subagents`、`config-reference`；Claude 側對照：code.claude.com/docs 的 `sub-agents`、`hooks`。
