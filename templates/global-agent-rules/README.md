@@ -13,6 +13,8 @@
     GENERATE.md           # 從本系統根目錄複製過來；全域的生成指令即此檔
     role.md               # core：我是誰、角色設定
     tone.md               # core：通用 AI 語氣與產出規範
+  skills/                  # （選配）Workflow 層資產；install.sh 部署、generator 不讀
+    <skill-name>/SKILL.md
   .gitignore
 ```
 
@@ -20,6 +22,8 @@
 > 全域 generator 把 source root 頂層的 `.md` 都當 core 內嵌。若 output（`CLAUDE.md`/`AGENTS.md`）和 source 同層，重生會把舊 output 當 core 又塞回去 → 自我參照污染。所以 source 收進 `source/`（generator 只讀這裡），第一層只放 output 與部署檔。
 >
 > **全域 = core-only：`source/` 內不放子資料夾。** 全域 output 以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩；按需材料（wiki/reference 等）只用在專案 scope。
+>
+> **skills 可以住在部署殼（選配）**：`skills/` 是 Workflow 層資產、不是 source——generator 只讀 `source/`、永不讀 `skills/`，所以不會污染生成。install.sh 會把含 `SKILL.md` 的資料夾 symlink 到 `~/.claude/skills/`、`~/.codex/skills/`，讓「全域規則＋skills」一次 clone、一次安裝、跨裝置同步。
 
 ## 第一次設定（來源裝置）
 

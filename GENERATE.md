@@ -49,7 +49,7 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 
 **不要在專案輸出裡重複全域內容。** Claude 與 Codex 原生會自動合併「全域設定檔 + 專案設定檔」，重複只會浪費 context 並造成不同步。
 
-**全域 source root 是 `~/agent-rules/source/`，不是 `~/agent-rules/`。** `~/agent-rules/` 是跨裝置部署 repo（部署殼），第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）與 `install.sh`。你**只讀 `source/`**、**絕不掃 repo 第一層**——否則會把第一層的 output 當成 core 內嵌，造成自我參照污染。**output 也絕不可寫進 source root。**
+**全域 source root 是 `~/agent-rules/source/`，不是 `~/agent-rules/`。** `~/agent-rules/` 是跨裝置部署 repo（部署殼），第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）與 `install.sh`（部署殼另可放 `skills/` 等 Workflow 層資產，由 install.sh 部署；generator 一律只讀 `source/`）。你**只讀 `source/`**、**絕不掃 repo 第一層**——否則會把第一層的 output 當成 core 內嵌，造成自我參照污染。**output 也絕不可寫進 source root。**
 
 **全域 scope = core-only：** 全域 source root（`~/agent-rules/source/`）**不可放子資料夾**（全域 output 會以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩）。全域只放頂層 core 檔。若 source root 出現子資料夾，**停下來提醒使用者**，不要自行輸出。
 

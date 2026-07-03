@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# agent-rules 全域部署器 — 把 repo 第一層的生成 output symlink 到各 agent 的設定位置。
+# agent-rules 全域部署器 — 一鍵部署「全域規則 + skills」：
+#   1) repo 第一層的生成 output symlink 到各 agent 的設定位置
+#   2) skills/ 下含 SKILL.md 的資料夾（選配）symlink 到各 agent 的 skills 目錄
 #
 # 用法（新裝置）：
 #   git clone <你的私有 agent-rules repo> ~/agent-rules
@@ -33,4 +35,14 @@ link() {
 link "$REPO_DIR/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 link "$REPO_DIR/AGENTS.md" "$HOME/.codex/AGENTS.md"
 
-echo "Done. 全域 agent 設定已透過 ~/agent-rules 同步（git pull 即更新）。"
+# skills（Workflow 層資產；generator 不讀這裡）：只連含 SKILL.md 的資料夾
+if [ -d "$REPO_DIR/skills" ]; then
+  for skill in "$REPO_DIR"/skills/*/; do
+    [ -f "${skill}SKILL.md" ] || continue
+    name="$(basename "$skill")"
+    link "${skill%/}" "$HOME/.claude/skills/$name"
+    link "${skill%/}" "$HOME/.codex/skills/$name"
+  done
+fi
+
+echo "Done. 全域 agent 設定與 skills 已透過 ~/agent-rules 同步（git pull 即更新）。"

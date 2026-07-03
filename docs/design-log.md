@@ -250,3 +250,17 @@
 **邊界確認**：未加生成 runtime config 流程；未複製任何 canonical 表；已 vendor 的 `GENERATE.vendored.md` 屬鎖版本設計，不追改。
 
 **R2**：GENERATE.md 已改 → 需同步 `~/agent-rules/source/GENERATE.md`（workspace 外；未授權則手動 `cp GENERATE.md ~/agent-rules/source/GENERATE.md` 後 commit）。
+
+---
+
+## 15. skills 部署併入全域部署殼（2026-07-03）
+
+**決策**：skills 從獨立 repo（`skills-source` + `sync-skills.sh`）遷入全域部署殼 `~/agent-rules/skills/`，`install.sh` 擴充成一鍵部署「全域規則＋skills」。新裝置一行：clone + install.sh。
+
+**理由**：
+- 原架構兩套部署系統、兩套維護心智；且 `sync-skills.sh` 與全部 symlink 指向小寫路徑（`~/evan-projects`），macOS 大小寫不敏感撐著、Linux/新裝置會斷（§12 已預言過這類坑）。
+- **層邊界不變**：skills 是 Workflow 層資產，generator 只讀 `source/`、永不讀 `skills/`（§1 本來就規定不掃 repo 第一層），放進部署殼不污染生成。本系統依然只 compile Instruction + Context——變的是**部署殼多載一種資產**，不是 generator 多生成一層。
+
+**改動**：`templates/global-agent-rules/install.sh` 加 skills 迴圈（只連含 `SKILL.md` 的資料夾，symlink 到 `~/.claude/skills/`、`~/.codex/skills/`）；template README 佈局圖與說明補 `skills/`（選配）；root README 跨裝置部署段同步；GENERATE.md §1 加一句「部署殼可放 Workflow 資產、generator 一律只讀 source/」。
+
+**R2**：GENERATE.md 又改 → 同步 `~/agent-rules/source/GENERATE.md`（本輪已直接執行，含 §14 那次的欠帳）。

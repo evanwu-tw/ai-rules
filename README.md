@@ -65,8 +65,8 @@ agent 設定可分五層。**本系統只生成前兩層（Instruction + Context
 
 全域 output 跨裝置完全一致，所以**不該每台重生**——把 `~/agent-rules` 設成**私有 git repo**，output commit 進去、用 symlink 同步：
 
-- **佈局**：`~/agent-rules/` 第一層放 `CLAUDE.md`、`AGENTS.md`（生成 output）+ `install.sh`；source 在 `source/`（`GENERATE.md`、`role.md`、`tone.md`）。
-- **install.sh**：把第一層 output symlink 到 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（idempotent，遇實體檔先備份）。
+- **佈局**：`~/agent-rules/` 第一層放 `CLAUDE.md`、`AGENTS.md`（生成 output）+ `install.sh`；source 在 `source/`（`GENERATE.md`、`role.md`、`tone.md`）；另可放 `skills/`（選配，Workflow 層資產，generator 不讀）。
+- **install.sh**：把第一層 output symlink 到 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`；若有 `skills/`，把含 `SKILL.md` 的資料夾 symlink 到兩個 agent 的 skills 目錄（idempotent，遇實體檔先備份）。
 - **新裝置一鍵**：`git clone git@github.com:<you>/agent-rules.git ~/agent-rules && ~/agent-rules/install.sh`，**不需重生**。
 - **日常同步**：來源裝置改 source → 重生（指向 `source/GENERATE.md`）→ `git push`；其他裝置 `git pull` 即生效（symlink 自動跟隨）。
 - **這個系統 repo（`ai-rules`）與個人全域 repo（`~/agent-rules`）分開**：前者放範本/規格、不含個資；後者含 role/tone、必須私有。
