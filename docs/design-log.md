@@ -264,3 +264,25 @@
 **改動**：`templates/global-agent-rules/install.sh` 加 skills 迴圈（只連含 `SKILL.md` 的資料夾，symlink 到 `~/.claude/skills/`、`~/.codex/skills/`）；template README 佈局圖與說明補 `skills/`（選配）；root README 跨裝置部署段同步；GENERATE.md §1 加一句「部署殼可放 Workflow 資產、generator 一律只讀 source/」。
 
 **R2**：GENERATE.md 又改 → 同步 `~/agent-rules/source/GENERATE.md`（本輪已直接執行，含 §14 那次的欠帳）。
+
+---
+
+## 16. 生成物與規則檔不帶 provenance 敘事（2026-07-08）
+
+**問題**：當 prompt 把任務框架寫成一段身世敘事（例如「這是某某 session、要為之後的環境立制度」），聽話的 agent 會把那段框架**烤進產出檔**——規則檔開頭變成在自報「我是哪個 model、哪次 session、哪天寫的」，並夾帶「某修法已生效」這類時間點狀態。這讓規則讀起來像 changelog、把規則與歷史混在一起，也讓後續 model 傾向按「作者是誰」而非「內容對不對」來對待規則。
+
+**決策**：生成物與規則檔一律**由內容自我證成**，不寫作者身分、session 身世、生成時間點或執行狀態。三類東西各有去處：
+
+| 內容 | 去處 |
+|---|---|
+| 系統層中立決策（如本條） | 本 design-log |
+| 個人 ops 制度的時間點診斷／決策 | 該制度自己的 append-only log（如 `~/agent-rules/docs/ops/decisions.md`），**不進**本中立 repo |
+| 不隨時間變的「為什麼」 | 放進規則檔的常駐理由段，敘述成 timeless 事實（「X 導致 Y」），不敘述成「某次發現 X」 |
+
+**理由**：
+- 規則的權威應來自它**擋掉的失效模式**，不是作者身分——身世敘事會誘發對「聰明 model 遺物」的膜拜或輕視。
+- 與本 repo 既有原則一致：canonical-per-concern、design-log 是 append-only 決策紀錄而非第二份 spec；身世本就該進 log，不該滲進常駐文件。
+
+**邊界**：本條是**措辭／文件衛生**原則，不改任何生成邊界或 Phase A 範圍。
+
+**待辦（先問 Evan 再動，屬 core spec）**：把「生成物不帶 provenance 敘事」明文收進 `GENERATE.md`，讓每次生成都遵守而不只靠這條 log。本輪未改 `GENERATE.md`。
