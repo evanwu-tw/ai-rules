@@ -300,3 +300,17 @@
 **取捨**：放 §0（compile 時的過濾動作，與「保留語意、不增刪」同層級），不放 §2（免被誤讀成改拆檔邏輯）；措辭限定「措辭衛生、不改生成邊界」，守 Phase A。
 
 **R2**：GENERATE.md 已改 → 已同步 `~/agent-rules/source/GENERATE.md`（cp，兩份 diff 為零）。
+
+---
+
+## 18. Codex user 層 skills 路徑查證：template install.sh 修正（2026-07-08）
+
+**查證**（官方文件 developers.openai.com/codex 的 `skills`、`concepts/customization`、`config-reference`，2026-07-08 時點）：
+- Codex user/global 層 skills 位置是 **`$HOME/.agents/skills/`**（"Skills can be global (in your user directory…)"，路徑明示為 `$HOME/.agents/skills`）。
+- 專案層是 `.agents/skills`（由 cwd 往 repo root 逐層掃）。README 表 A Workflow 列的 `.agents/skills` **經查證正確，不改**。
+- **`~/.codex/skills/` 全官方文件未提及**——template `install.sh` 原本把 skills 連到該處，屬未查證的直覺路徑。
+- 兩 scope 無優先序合併：同名 skill 不收斂，並列出現。
+
+**改動**：template `install.sh` skills 迴圈補 `~/.agents/skills/` link；`~/.codex/skills/` 保留作舊版相容（附註可自行拿掉）。
+
+**教訓（通用）**：部署路徑寫進腳本前先查官方文件，不憑目錄名直覺（`.codex` 看起來像對的，但不是）。

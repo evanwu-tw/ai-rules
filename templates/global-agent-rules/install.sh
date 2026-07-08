@@ -36,11 +36,14 @@ link "$REPO_DIR/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 link "$REPO_DIR/AGENTS.md" "$HOME/.codex/AGENTS.md"
 
 # skills（Workflow 層資產；generator 不讀這裡）：只連含 SKILL.md 的資料夾
+# Codex 官方 user 層 skills 位置是 ~/.agents/skills/（developers.openai.com/codex/skills）；
+# ~/.codex/skills/ 官方文件未提及，僅作舊版相容而保留，確認不需要可自行拿掉該行。
 if [ -d "$REPO_DIR/skills" ]; then
   for skill in "$REPO_DIR"/skills/*/; do
     [ -f "${skill}SKILL.md" ] || continue
     name="$(basename "$skill")"
     link "${skill%/}" "$HOME/.claude/skills/$name"
+    link "${skill%/}" "$HOME/.agents/skills/$name"
     link "${skill%/}" "$HOME/.codex/skills/$name"
   done
 fi
