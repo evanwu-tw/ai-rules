@@ -285,4 +285,18 @@
 
 **邊界**：本條是**措辭／文件衛生**原則，不改任何生成邊界或 Phase A 範圍。
 
-**待辦（先問 Evan 再動，屬 core spec）**：把「生成物不帶 provenance 敘事」明文收進 `GENERATE.md`，讓每次生成都遵守而不只靠這條 log。本輪未改 `GENERATE.md`。
+**待辦（先問 Evan 再動，屬 core spec）**：把「生成物不帶 provenance 敘事」明文收進 `GENERATE.md`，讓每次生成都遵守而不只靠這條 log。本輪未改 `GENERATE.md`。（→ 已於 §17 落地。）
+
+---
+
+## 17. §16 落地：provenance 原則寫進 GENERATE.md（2026-07-08）
+
+§16 的待辦（Evan 授權後）已執行。
+
+**改動**：
+- `GENERATE.md §0`：於「保留規則語意、不增刪」bullet 後加一條「**產出不帶 provenance 敘事**」——生成物只講規則本身，不寫 model／session／生成日期身世與「已生效」狀態；source 若夾帶則生成時濾掉。明寫兩個防呆：純 `last-updated:` 日期可留、本條不改任何生成邊界。
+- `GENERATE.md §8`：重生 checklist 加一項「產出未夾帶 provenance 敘事」，確保每次生成都檢查、不只躺在 §0。
+
+**取捨**：放 §0（compile 時的過濾動作，與「保留語意、不增刪」同層級），不放 §2（免被誤讀成改拆檔邏輯）；措辭限定「措辭衛生、不改生成邊界」，守 Phase A。
+
+**R2**：GENERATE.md 已改 → 已同步 `~/agent-rules/source/GENERATE.md`（cp，兩份 diff 為零）。
