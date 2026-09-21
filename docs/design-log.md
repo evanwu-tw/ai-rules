@@ -314,3 +314,30 @@
 **改動**：template `install.sh` skills 迴圈補 `~/.agents/skills/` link；`~/.codex/skills/` 保留作舊版相容（附註可自行拿掉）。
 
 **教訓（通用）**：部署路徑寫進腳本前先查官方文件，不憑目錄名直覺（`.codex` 看起來像對的，但不是）。
+
+
+## 19. 簡化授權與規則維護（2026-09-14）
+
+- 授權範本區分 review 與明確修改任務；後者可在已授權範圍內做低風險、可逆的修改，不重複詢問。
+- 生成採 source-only：長存修改直接改 source，manual 只原樣保留。取消由 output 回灌的入口；生成期間不自行刪改或搬移 source，專案覆寫也不得放寬此邊界。
+- Codex profile 更正全域與專案載入順序，補上 override 與 fallback。來源：[OpenAI AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)。
+- 專案模板移除特定維護者的 repo 位址。README 補上部署版更新前的差異檢查，避免覆蓋部署端新增的寫入保護。
+- 本輪不更動既有生成架構、manual 格式、平台 targeting 與部署方式。部署版的交易與恢復保護不能因同步較舊 base 而移除。
+
+
+## 20. 一般專案直接維護，生成模式保留（2026-09-15）
+
+- 新的一般專案以 `templates/project/` 為預設：`AGENTS.md` 是共用原稿，`CLAUDE.md` 使用 `@AGENTS.md`。省去生成、vendored 規格與細節複製的必要步驟；不是減少 import 後的載入 token。
+- 既有 source/output 分離的專案與全域部署維持生成模式。直接維護與生成模式不自動互轉，保留 manual、targeting、部署版 snapshot/gate/transaction 等要求；source-only 禁止反向回灌仍適用生成模式。
+- README 先說日常使用方式，再提供生成模式與五層模型參考。GENERATE.md 維持 §0–§8 編號，合併重複說明並移除非生成範圍的平台能力清單，減少維護與查證負擔。
+- 此次不改全域部署規格與 outputs，也不重生現有專案。已鎖版的生成規格不自動更新。
+- 官方依據：[Claude 共用 AGENTS.md](https://code.claude.com/docs/en/memory#agentsmd)、[Codex 指令檔](https://learn.chatgpt.com/docs/agent-configuration/agents-md)（查閱：2026-09-15）。
+
+
+## 21. 共用生成本文與 Claude import（2026-09-16）
+
+- 生成模式改為一份 `AGENTS.md` 本文，加 `CLAUDE.md` 引用入口；不再依執行平台生成兩份全文。直接維護模式不變。
+- source 仍是生成模式原稿。舊 targeting 必須先明確遷移；首次共用既有 AGENTS manual 需確認適用兩平台，Claude manual 留在原檔。既有鎖版專案不自動更新。
+- 保留 snapshot、雙重寫入 gate、完整 drift 檢查、交易恢復與獨立機制性唯讀驗證。Claude coverage 與大小按 import 展開內容驗收。
+- 全域部署增加 Claude 目錄內的共用檔連結，安裝器支援隔離目錄、只部署規則、備份與核心連結失敗恢復。既有 skills 部署保留。
+- 專屬規範有需要才使用平台原生設定；Codex execpolicy rules 不作 Markdown 指令。共用內容減少維護分歧，不保證兩模型行為一致，也不節省本文 context。

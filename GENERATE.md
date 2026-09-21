@@ -1,142 +1,92 @@
-# GENERATE.md — agent-rules 生成規格
+# GENERATE.md：生成模式規格
 
-這份文件是 **agent-rules 系統的唯一權威**。任何 agent（Claude、Codex、或其他）被要求「生成設定檔」時，**完整照這份做**。
-
----
+本檔是 source/output 分離的**生成行為唯一權威**。一般專案直接維護 `AGENTS.md`，不使用本流程，見 [README](README.md)。既有直接維護的檔案不得因採用模板而自動被 generator 接管；已有生成物的專案也不自動轉換模式。
 
 ## 0. 心智模型
 
-- **source 是唯一真相，你（agent）是 compiler。**
-- 你讀某個 scope 的 `agent-rules/` source，輸出符合**你自己平台慣例**的設定檔。
-- 你只做「依平台慣例調整呈現與語氣、拆檔、建索引」。**保留規則語意，不改寫規則的實質內容**，更不增刪 source 沒有的規則。
-- **產出不帶 provenance 敘事**：生成的設定檔只講規則本身，不寫它的出身——不寫「哪個 model／哪次 session／哪天生成」，也不寫「某修法已生效／已執行」這類一次性狀態。規則的權威來自它擋掉的失效模式，不是作者身分；身世寫進輸出只會墊高每次對話的 context，並讓後續 model 按「誰寫的」而非「對不對」對待規則。source 本身若夾帶這類敘事，生成時**濾掉、不照抄**。（純 `last-updated:` 日期屬維護資訊、可留；本條只針對身世敘事與狀態。屬措辭衛生，**不改任何生成邊界**。歷史脈絡的去處見放置表「個人偏好／歷史脈絡 → memory」與 `docs/design-log.md`。）
+- source 是規則原稿；agent 負責組裝、拆檔與索引，不增刪規則或改變語意。不依執行 agent 改寫稱呼、語氣或產出另一份平台版本。
+- 本系統只生成 Instruction 與 Context；Runtime、Memory、Workflow 與各平台能力的設定不在生成範圍。五層對照見 [README](README.md#設定分層五層模型)。
+- 生成物不寫 model、session、生成日期身世或「已生效」等狀態敘事；source 中若有，生成時濾掉。純 `last-updated:` 與 §5 的 banner 可保留。理由與歷史留在決策紀錄。
 
-### 系統邊界：只 compile 兩層
-
-agent 設定可分五層；**本系統只生成其中兩層**：
-
-- ✅ **Instruction**（常駐工作指令）→ 內嵌進根檔（`CLAUDE.md` / `AGENTS.md`）。
-- ✅ **Context**（按需 / 路徑範圍資料）→ 拆到 `agent-context/`（僅專案）。
-- ❌ **Runtime**（hook / 權限 / sandbox / config）、**Memory**（agent 自累積記憶）、**Workflow**（skill / command / plugin）——這三層是各 agent 自己設定的**相鄰層，本系統不生成**。
-
-> **為什麼不生成**：這三層**跨平台語意不等價**——hook 的 trust 模型與事件集不同（Codex 非 managed hook 需 review + trust、企業 managed hooks 為其特有）；subagent 核心語意不對映（Claude 依 description 自動路由 vs Codex 需使用者明點；Claude per-subagent `tools:` 白名單在 Codex 只能降級為 `sandbox_mode` / `mcp_servers` 粗粒度）；memory 是 machine-local 的非確定性累積。單一中立 source 無法 compile 出跨平台等價的生成物，硬做只會產生假等價。故維持不生成，只在放置表與 reviewer 提醒標示候選。（查證紀錄：本 repo `docs/design-log.md` §13。）
-
-（五層 × 雙平台完整對照見 README「設定分層」。）
-
-### 決策 / 放置表（canonical 在此）
+### 決策 / 放置表（僅適用生成模式；canonical 在此）
 
 | 需求 | 放哪 | 本系統生成? |
 |---|---|---|
-| 建議性、每次都該遵守 | rule → `agent-rules/` 頂層 core | ✅ |
-| 偶爾才讀的大份資料 | `agent-rules/<子資料夾>/` → `agent-context/` + 索引 | ✅ |
-| 某路徑/資料夾專屬指令 | 手動：Claude `.claude/rules/` 或 Codex nested `AGENTS.md` | ❌（手動）|
-| 強制、可程式檢查/事件觸發 | hook / 權限（`settings.json` / `config.toml`；Codex execpolicy `rules`）| ❌ |
-| 個人偏好 / 歷史脈絡 | memory（不取代 source；長存才回灌）| ❌ |
-| 多步驟、可重複 workflow | skill / command / plugin | ❌ |
-| 交給特定角色執行的可重複任務 | subagent：Claude `.claude/agents/`；Codex `.codex/agents/`（語意不等價，見 §4）| ❌（手動）|
+| 每次都該遵守的規則 | `agent-rules/` 頂層 core | 是 |
+| 按需閱讀的資料 | source 子資料夾 → `agent-context/` + 索引 | 是，僅專案 |
+| 特定路徑的指令 | 手動：Claude `.claude/rules/`；Codex nested `AGENTS.md` | 否 |
+| 可程式檢查或事件觸發的強制限制 | 平台 hook / 權限設定 | 否 |
+| 個人偏好或歷史脈絡 | memory；長存修改依 §6 | 否 |
+| 多步驟、可重複工作 | skill / command / plugin | 否 |
+| 特定角色的可重複任務 | 平台 subagent 設定 | 否 |
 
-> **reviewer 提醒（hook）**：core 規則若帶「必須／絕不／每次」等強制語氣、且能被程式檢查或事件觸發驗證，它其實是 **hook 候選**——提醒使用者改用 hook（Claude `settings.json`；Codex `hooks.json` / `config.toml`），不要只寫成 markdown 規則（模型不保證遵守）。
-
-> **reviewer 提醒（subagent）**：core 規則若描述「交給特定角色執行的可重複任務」（reviewer、測試代理…），它是 **subagent 候選**——提醒使用者到各平台自建（Claude `.claude/agents/`、Codex `.codex/agents/`），並注意兩平台語意不等價（Claude 自動路由 vs Codex 明點、`tools:` 白名單無 Codex 對應）。本系統不生成。
-
----
+Reviewer 遇到可程式驗證的強制規則，標為 hook 候選；遇到特定角色的重複任務，標為 subagent 候選。提醒使用者依平台設定，不替使用者生成。平台機制不保證等價，不能把 markdown 指令當成強制執行機制。
 
 ## 1. 兩個 scope
 
-| scope | source（你要讀的 source root） | 你要產出的東西 |
+| scope | source root | 平台目標 |
 |---|---|---|
-| 全域 | `~/agent-rules/source/` | Claude → `~/.claude/CLAUDE.md`；Codex → `~/.codex/AGENTS.md`（**僅根檔，core-only**） |
-| 專案 | `<專案>/agent-rules/` | Claude → `<專案>/CLAUDE.md`；Codex → `<專案>/AGENTS.md`；細節檔 → `<專案>/agent-context/<子資料夾>/`（agent 共用） |
+| 全域 | `~/agent-rules/source/` | 部署 repo 第一層 `AGENTS.md` 共用內容、`CLAUDE.md` 引用入口；由安裝器連到平台位置 |
+| 專案 | `<專案>/agent-rules/` | 專案根 `AGENTS.md` 共用內容、`CLAUDE.md` 引用入口；細節在 `agent-context/` |
 
-**不要在專案輸出裡重複全域內容。** Claude 與 Codex 原生會自動合併「全域設定檔 + 專案設定檔」，重複只會浪費 context 並造成不同步。
-
-**全域 source root 是 `~/agent-rules/source/`，不是 `~/agent-rules/`。** `~/agent-rules/` 是跨裝置部署 repo（部署殼），第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）與 `install.sh`（部署殼另可放 `skills/` 等 Workflow 層資產，由 install.sh 部署；generator 一律只讀 `source/`）。你**只讀 `source/`**、**絕不掃 repo 第一層**——否則會把第一層的 output 當成 core 內嵌，造成自我參照污染。**output 也絕不可寫進 source root。**
-
-**全域 scope = core-only：** 全域 source root（`~/agent-rules/source/`）**不可放子資料夾**（全域 output 會以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩）。全域只放頂層 core 檔。若 source root 出現子資料夾，**停下來提醒使用者**，不要自行輸出。
-
-**專案細節檔收進 namespace：** 專案的子資料夾一律輸出到 `<專案>/agent-context/` 底下的同名資料夾，**絕不**直接寫到專案根（避免覆蓋 repo 既有的 `wiki/`、`docs/` 等）。詳見 §3、§5。
-
----
+- 每次固定檢查共用檔與引用入口，不再接受平台 profile 或 single-target 分支。任一 agent 均依同一規格產出這一組檔案。
+- 全域 source 只准頂層 core，出現子資料夾就停止。不得把 output 寫進 source root，也不得把部署 repo 第一層的 output、安裝器或 skills 當 source。
+- 全域走 symlink 部署時，保留既有部署方式，見 [README](README.md#跨裝置部署)。全域不生成 `agent-context/`。
+- 專案不重抄全域規則。細節只能輸出到 `agent-context/`，不得寫進專案根既有的 `wiki/`、`docs/` 等同名資料夾。
 
 ## 2. source 佈局規則（資料夾即分類）
 
-讀 `agent-rules/` 時，依**位置**決定每個檔的命運。只有兩條通則：
+1. 頂層 `.md` 為 core，依檔名排序只內嵌進 `AGENTS.md`；可用 `00-`、`10-` 前綴固定順序。
+   - 排除 `GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md` 與所有 `*.vendored.md`（含 `GENERATE.vendored.md`），不將這些工具檔內嵌。
+2. 專案的任意子資料夾為按需資料，保留檔名與巢狀路徑，近乎逐字複製到 `agent-context/<原相對路徑>`，兩個 agent 共用，不依平台改寫。全域不適用。
+3. `AGENTS.md` 只索引按需資料，逐檔加一般相對連結及「何時該讀」。連結不會強制載入，讀取時機必須清楚。
 
-1. **頂層 `.md` 檔** = **core** → 內容**內嵌**進根設定檔（`CLAUDE.md` / `AGENTS.md`）。
-   - **保留檔名例外（不視為 core、不內嵌）**：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md`、`GENERATE.vendored.md`（以及任何 `*.vendored.md` base 規格副本）。這些是給人看的說明、生成指令或 vendored 規格，**絕不**內嵌進輸出。
-   - **順序**：core 內嵌**依檔名排序**。建議用數字前綴（`00-role.md`、`10-style.md`…）確保跨次重生順序穩定。
-2. **子資料夾**（**僅專案 scope**）= 按需材料（資料夾名稱不限——`wiki/`、`reference/`、`playbooks/`… 都行）
-   → 各檔輸出到 `<專案>/agent-context/<子資料夾>/<同名>`（含巢狀結構），**agent 共用、近乎逐字複製**；根檔針對每個資料夾放一段索引連結，說明「何時該讀」。
-   - `wiki/`、`reference/` 只是常見例子，不是固定清單。
-   - **全域 scope 不適用**：全域 source root（`~/agent-rules/source/`）內維持扁平、不可有子資料夾（見 §1）。
-
-> 為什麼分？根設定檔每次對話都被整個讀進 context，要**精簡**。常駐規則內嵌；大份材料拆出去、按需載入（progressive disclosure）。
+4. `CLAUDE.md` 的生成區只有 §5 banner 與獨立一行 `@AGENTS.md`；保留其原有 manual。不再複製 core。沒有 manual 時，import 是唯一非註解內容。
 
 ### 根檔大小預算
 
-根檔（`CLAUDE.md` / `AGENTS.md`）必須小：
-- **目標數字**（2026-06 查證，以各自最新官方文件為準）：
-  - Claude `CLAUDE.md` 目標 **< ~200 行**。
-  - Codex `AGENTS.md` 合併載入受 `project_doc_max_bytes` 約束（**預設 32 KiB**）；**防呆**：視為 global + project + nested 的合併載入預算，**每份 `AGENTS.md` 都要精簡**，避免擠掉後續 instruction（串接由 root 往下、達上限即**截停**——超額時愈深層、愈專案特有的檔先被丟）。
-  - Claude `@import` **啟動即載入、不省 context**；要 progressive disclosure 一律用一般 markdown 連結指向 `agent-context/`（別用 `@import` 充當按需）。
-- **硬規則**：若 core 內嵌後根檔過大，**先把可拆的內容移到子資料夾**（變按需材料）；仍無法縮小就**停下來提醒使用者**，不要硬塞一個超大的根檔。
-
----
+- Claude 引用入口展開共用檔與 manual 後，常駐規則目標低於約 200 行，不能只計算 wrapper 行數。Codex `project_doc_max_bytes` 預設 32 KiB；本系統保守以全域與專案鏈合計控制預算，避免後面的深層指引被截停。
+- Claude `@import` 會載入內容，不省 context。按需細節不得用 `@import`；一般相對連結依 §2.3。
+- 超標就停止生成並提出 source 精簡建議；generator 不自行刪改或搬移 source。專案要拆 source 子資料夾，先取得修改授權；全域維持 core-only。
+- 官方來源（查閱：2026-09-15）：[Claude memory](https://code.claude.com/docs/en/memory)、[OpenAI AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)。
 
 ## 3. 生成程序（逐步）
 
-1. **確認 scope**：判斷在做全域還是某專案，據此決定 source root 與輸出路徑（見 §1）。**全域 source root = `~/agent-rules/source/`**（不是 `~/agent-rules/`）。
-2. **讀全部 source**：讀該 scope source root 底下所有 `.md`（專案含 `wiki/`、`reference/` 等子資料夾；全域只有頂層檔）。**全域時只讀 `source/`，不讀 repo 第一層的 output。**
-3. **讀生成指令**：
-   - 全域：`~/agent-rules/source/GENERATE.md` 即指令（內容同本檔）。
-   - 專案：先讀 `<專案>/agent-rules/generate.md`；它會引用本檔為 base，再補/覆寫專案特有規則。**專案 generate.md 與本檔衝突時，以專案 generate.md 為準。**
-4. **套用你的 agent profile**（見 §4），決定輸出檔名、位置、平台特有段落、語氣。
-5. **組裝根設定檔**：
-   - 把所有 core（頂層檔，依**檔名排序**）內嵌；可依平台慣例調整呈現與語氣，但**保留規則語意、不增刪規則**。
-   - 末尾加一個「索引 / 延伸資料」段落，用**相對路徑連結**指向 `agent-context/` 底下每個細節檔，並各寫一句「何時該讀它」。
-   - 檢查根檔大小預算（§2）。
-6. **拆出細節檔**（**僅專案**）：把所有子資料夾輸出到 `<專案>/agent-context/<同名>/`（含巢狀結構），內容**近乎逐字複製、agent 共用**（不為各 agent 改寫，避免兩次生成互相覆蓋成不同內容）。
-   - **覆蓋安全**：只寫 `agent-context/`，絕不碰專案根既有的同名資料夾。若 `agent-context/` 內既有檔**沒有 agent-rules banner**，停下來提醒，不要覆蓋。
-7. **套用擁有區機制**（見 §5）：保留既有輸出檔裡的 `manual` 區塊。
-8. **加 banner**（見 §5）到每個你產生的檔頂部。
-9. **回報**：簡述你產生/更新了哪些檔、保留了哪些 `manual` 區塊、根檔大小是否在預算內。
+1. **確認 scope 與授權**：依 §1 定位 source 與固定的兩個 root outputs。全域寫部署 repo 的實體檔，不經平台 symlink 寫入。未授權的其他專案、原生設定與 skills 不在範圍。
+2. **落檔 snapshot**：正式寫入前，在 workspace 外建立 task staging。保存同批完整 source、兩個既有 root outputs、全部既有 `agent-context/` outputs、各檔 manual、每個候選路徑的 bytes／不存在狀態及 canonical path／symlink 狀態；建立 checksum manifest 並設為唯讀。保留至獨立 post-write 驗證完成，失敗則保留並回報位置。後續只用此 snapshot，source 全程唯讀。
+3. **讀完整 source 與指令**：依 §2 排除工具檔；專案先讀 `generate.md` 指定的 base。專案只可覆寫內容呈現、拆檔與索引策略，不得放寬 source-only、ownership/banner、manual、snapshot、輸出邊界、gate、交易恢復與機制性唯讀驗證。
+4. **檢查可共用性**：依 §7 偵測未遷移的 targeting，命中就停止。首次轉換的 `AGENTS.md` 如含 manual，未經使用者明示確認可供兩平台共用前停止；不得因 import 默默擴大其適用範圍。不把 output 當規則 source。
+5. **組裝共用內容**：core 依檔名排序保留語意進 `AGENTS.md`；產生 §2 定義的引用入口，逐檔加入按需索引，檢查展開後大小。來源不存在的規則不得補入。
+6. **處理細節與 orphan**：專案細節近乎逐字複製到 `agent-context/`。掃出已無 source 對應的 generated orphan，列入 dry-run，不自動刪除。無 manual 的 orphan 只有在使用者看過 dry-run 並明確確認後才納入刪除交易；有 manual 就停止，先另行遷移。未知 ownership 依 §3.8，不覆蓋。
+7. **只寫 staging**：組裝全部 candidates，加 banner、依 §5 保留各檔 manual；建立 source path、heading、出現順序到候選內容的 section manifest。`CLAUDE.md` 的 coverage 透過展開 `@AGENTS.md` 計算，不要求在 wrapper 複製本文。
+8. **寫入前雙重 gate**：機械檢查 scope/path allowlist、既有與候選 banner、manual 數量／順序／標記／bytes、section coverage、import 唯一性及目標可解析、targeting 零命中、orphan、大小與 source-only。另由獨立語意 reviewer 比對每項 source 義務在 `AGENTS.md` 與 Claude 展開內容中一致；不以機械 coverage 代替語意驗證。任一疑點、不確定或意見衝突就停止，正式 outputs 零寫入。既有 output 無合法 banner 時，先列候選 diff 與接管／不接管選項，告知「所有非 manual 區日後重生可能完整覆蓋」，取得明確接管授權後才可繼續；之前不得自動備份、改名或覆蓋該檔。
+9. **交易與恢復**：寫入前再比對 source 與每個候選 output 的完整 pre-run state，含 bytes、manual、不存在狀態與 canonical/symlink 位置；任一 drift 就停止且 outputs 零寫入。通過後整批替換共用檔、入口與候選細節／已授權刪除。任一步或 post-write 驗收失敗，從 snapshot 恢復所有候選的原 bytes，刪除本輪新建的候選；不得用 Git reset/checkout 恢復，也不恢復 source 或改動其他檔案。snapshot 保留。
+10. **獨立驗證並回報**：機制性唯讀的 fresh-context verifier 接收規格、同批 snapshot、candidates、機械與語意 gate 結果、dry-run diff 及寫入結果，不拿作者的完成結論。逐項驗收 coverage、reverse coverage、import 展開語意、banner、manual、大小、targeting 與交易結果。無此機制只能標示未驗證，不能宣稱完成。通過後才可清理 staging；回報更新／刪除檔案、保留的 manual、展開大小與實際載入驗證狀態。
 
----
+## 4. 平台載入與專屬規範
 
-## 4. Agent profiles
+共用指令只存在 `AGENTS.md`。兩平台入口載入同一份內容，不承諾模型行為完全相同。專屬規範只有實際需要才新增；不建立空規則，也不由 generator 管理平台設定。
 
-只記錄真正的差異。共通原則：根檔精簡、core 內嵌、細節拆檔加索引、不增刪 source 沒有的規則。
+### Claude Code
 
-### Claude profile
+- 目標檔名依 §1。Claude 載入 user 與專案的 `CLAUDE.md`；子目錄的檔案在讀取該目錄檔案時載入。`CLAUDE.md` 透過 `@AGENTS.md` 載入共用規則。
+- `@import` 只用於常駐內容；按需細節仍用一般連結。直接維護與生成模式都可用此入口，差別是原稿是否位於 source，不以 import 判斷 ownership。
+- 路徑限定規則可手動放 `.claude/rules/`，以 `paths:` 限定範圍；不帶 `paths:` 的規則不是按需載入。本系統不生成。
 
-- **輸出檔**：專案 `CLAUDE.md`（專案根）／全域 `~/.claude/CLAUDE.md`。
-- **原生合併**：Claude Code 會自動載入 `~/.claude/CLAUDE.md`（user）+ 專案 `CLAUDE.md` + 子目錄的巢狀 `CLAUDE.md`。所以**專案檔不要重抄全域**。
-- **連結方式**：用**一般 markdown 相對連結**指向 `agent-context/` 底下的細節檔（要的是「按需才讀」）。**不要**用 `@path` import 語法指它們——`@import` 是 **eager（啟動即載入）＝等同內嵌進 Instruction**，會破壞 progressive disclosure。`@import` 只在你「真的想要某段每次都載入」時才用。
-- **path-scoping（選配、手動）**：`.claude/rules/`（可帶 `paths:` frontmatter 做 glob 範圍載入）是 Claude 獨有的選項，**屬手動放置、本系統不生成**。需要時由使用者自行建立。
-- **平台特有段落**：可提及 skills、hooks、slash commands、subagents（`.claude/agents/`）、MCP（若 source 有相關規則）。但這些屬 Runtime/Workflow 層、**本系統不生成**——只在 source 有相關「指示」時改寫成一般說明，不要無中生有。
-- **語氣**：祈使句、精簡、條列。
+### Codex
 
-### Codex profile
+- 目標檔名依 §1。先讀 Codex home（預設 `~/.codex`）的全域指引，再從專案根目錄往目前工作目錄串接；全域優先取非空 `AGENTS.override.md`，否則取 `AGENTS.md`。
+- 專案每個目錄依序找 `AGENTS.override.md`、`AGENTS.md`、設定的 fallback 檔名，最多取一份。越接近工作目錄越晚載入，衝突時優先。
+- 路徑限定使用手動 nested `AGENTS.md` / `AGENTS.override.md`。Claude glob 可跨目錄，nested 按目錄分層，兩者不等價；跨目錄規則若改寫到 root `AGENTS.md`，須以文字標示範圍，並說明無機制保證。
+- Codex execpolicy `rules` 是權限設定，不是 Claude `.claude/rules/` 的對應物；本系統不生成兩者。
 
-- **輸出檔**：專案 `AGENTS.md`（專案根）／全域 `~/.codex/AGENTS.md`。
-- **原生合併**：Codex 會由內而外合併目錄樹上的 `AGENTS.md` 與全域 `~/.codex/AGENTS.md`。所以**專案檔不要重抄全域**。
-- **連結方式**：用一般 markdown 相對連結指向 `agent-context/` 底下的細節檔。
-- **path-scoping（選配、手動）**：Codex 指令的路徑/目錄範圍用 **nested `AGENTS.md` / `AGENTS.override.md`**（由 root 往 cwd 逐層串接、近者覆蓋；每目錄取一檔，`AGENTS.override.md` 優先），**屬手動放置、本系統不生成**。**降級提醒（手動搬移時）**：Claude `.claude/rules/` 的 glob 可跨目錄；nested `AGENTS.md` 只有「所在目錄」範圍。跨目錄的 path-scoped 規則搬到 Codex 時，降級為寫進 root `AGENTS.md`、以文字描述適用範圍（無機制保證，靠模型遵守）。
-- **平台特有段落**：Codex **有** hooks（`hooks.json` / `config.toml`）、subagents（`.codex/agents/`，需使用者明點、不自動路由）、skills（`.agents/skills`）、plugins、memories、execpolicy `rules`——但它們屬 **Runtime / Workflow / Memory 層、本系統不生成**。`AGENTS.md` 本身只是 instruction file，對應內容請改寫成一般說明或省略。**注意：Codex `rules`（execpolicy 權限）≠ Claude `.claude/rules/`（路徑範圍指令），同名不同物，勿混。**
-- **語氣**：直白、直接、條列。
+- 工作方式的 Codex 專屬差異可另由原生 `developer_instructions` 設定管理；它是額外 developer 指令，不是 Markdown rules。僅在有明確差異時另行維護，不由本系統生成或覆蓋整份 TOML。來源：[OpenAI 設定欄位](https://learn.chatgpt.com/docs/config-file/config-reference)。
 
-> 未來新增 agent（Cursor / Windsurf 等）：在此新增一段 profile 即可，其餘機制不變。
-
----
+平台載入與大小來源見 §2。Claude 專屬差異使用其 rules；權限、hooks 與其他平台設定不混入文字指令生成。
 
 ## 5. 擁有區 vs 手動區（防 drift）
 
-每個生成檔分兩種區域：
-
-- **generator 擁有區**：由 source 產生。**重生一律整段覆蓋，不做差異偵測。** 預設整份檔都是擁有區。
-- **手動區**：使用者直接在輸出檔寫、且希望保留的內容。**重生必須原樣保留、絕不更動。**
-
-用 HTML 註解標記（在 markdown 不顯示、可被解析）：
+生成檔預設為 generator 擁有區，重生時整段替換；不偵測或回灌擁有區的手改。想長存就改 source。手動區用下列標記，含標記與內容原樣保留：
 
 ```markdown
 <!-- agent-rules:manual:start -->
@@ -144,18 +94,13 @@ agent 設定可分五層；**本系統只生成其中兩層**：
 <!-- agent-rules:manual:end -->
 ```
 
-未被 `manual` 包住的內容，一律視為擁有區。
+順序：先擷取每個既有檔的全部 manual 區塊，再重建擁有區，最後把 manual 放回同一檔的原相對位置，盡量貼近原前後文。未被 manual 包住的內容不保證保留。markers 只在 fenced code block（反引號或波浪號）外、整行完全匹配正式標記時解析；inline、近似寫法及帶前後空白者不解析。manual 必須成對且不巢狀；數量、順序、標記與 bytes 均不得改動。寫入 gate 依 §3。
 
-**重生時的鐵則**：
-1. 先掃描既有輸出檔，**完整抄下所有 `manual` 區塊**（含標記與內容）。
-2. 重新生成擁有區（**直接覆蓋，不比對舊內容**）。
-3. 把保留的 `manual` 區塊放回原本相對位置（盡量貼近原本前後文）。
-
-> **為什麼不自動偵測手改？** agent 生成是非確定性的——每次改寫的自然語氣差異，無法和真正的手改可靠區分。所以擁有區的手改不保證被保留；想保留的東西，請放進 `manual` 區，或回去改 source（見 §6）。
+共用 `AGENTS.md` 的 manual 對兩平台都可見；Claude 入口的 manual 只供 Claude。首次遷移的共用適用性確認依 §3.4；不得把舊 manual 搬進 source 或其他 output。
 
 ### Banner
 
-每個生成檔**頂部**放這段（依平台註解習慣，markdown 用 HTML 註解）：
+每個生成檔頂部使用以下 banner；Claude 會剝除 block-level HTML 註解，Codex 未確認，所以仍保持精簡：
 
 ```markdown
 <!--
@@ -166,59 +111,30 @@ GENERATED by agent-rules — source: <該 scope 的 agent-rules/ 路徑>
 -->
 ```
 
-> **banner 成本**：Claude 會在注入 context 前**剝除 block-level HTML 註解**，故 banner 在 Claude 端 ≈ 0 context 成本；Codex 端未確認，因此 banner 仍維持精簡。
+合法 banner 為第一個非空白 block-level HTML comment 內含 exact string `GENERATED by agent-rules`；source path 是 metadata，不影響辨識。無合法 banner 的接管流程依 §3.8。
 
----
+## 6. 修改規則：只改 source，再生成
 
-## 6. 迭代回路（手改 → 反吐回 source）
+- 依使用者授權直接改 source，再生成。生成期間 source 唯讀，不從 output 或 memory 推導、補寫或自動回灌規則。
+- 可以讀既有 output 做快照、banner/manual 與 drift 檢查、失敗恢復；manual 只原樣放回同一檔，不移入 source 或其他 output。
+- memory 是學習紀錄，不是生成來源。需長存的規則由使用者確認具體要求並授權修改 source，不由 generator 自動升格。
+- 修改理由放 `CHANGELOG.md` 或決策紀錄，不混入常駐規則；工具檔排除依 §2。
 
-擁有區一律重生覆蓋，所以**手改擁有區不會自動保留**。要讓改動長存，兩條路：
+## 7. 舊 targeting 的遷移
 
-1. **回灌 source（推薦，給「應該長存的規則」）**：當使用者說「我改了輸出檔某段、希望保留」時，把該改動寫回對應的 source 檔（core 改動回頂層檔；細節改動回它原本所屬的子資料夾），並在 source 該處或 `agent-rules/CHANGELOG.md` 記**一行理由**（為什麼、何時、來自哪個生成檔）。之後重生就會帶著它。
-2. **manual 區（給「不進 source 的一次性 / 本機內容」）**：包進 `agent-rules:manual:start` … `agent-rules:manual:end` 標記（完整寫法見 §5），重生保留，不需回灌。
+新共用 source 不使用平台 targeting。依 §5 相同的 fence／整行規則，掃描 core 與細節中的 `<!-- agent: claude -->`、`<!-- agent: codex -->`、`<!-- /agent -->`；命中任何一個就停止，列出位置，不自動跳過、合併或把平台專屬內容公開給兩邊。
 
-> **不要求** agent 在重生前自動掃描、比對、偵測手改（非確定性生成下不可靠）。回灌由**使用者主動提出**時才做。`CHANGELOG.md` 屬於人看的工具檔，不會被內嵌進輸出（§2）。
-
-### auto-memory → 回灌 source
-
-Claude auto memory 與 Codex memories 是 **machine-local、由 agent 自行累積的學習**，**不取代 source**、也不跨裝置。當 memory 裡出現**應長存、可共享、可追溯**的規則時，循上面的回灌機制把它寫回 source（記一行理由），別讓它只留在 memory 裡 drift。
-
----
-
-## 7. agent-targeting 逃生口（少用）
-
-source 預設是 agent 中立、全部共用。極少數「某段只給特定 agent」的情況，用標記包起來：
-
-```markdown
-<!-- agent: claude -->
-只有產生 Claude 的設定檔時才納入這段。
-<!-- /agent -->
-
-<!-- agent: codex -->
-只有產生 Codex 的設定檔時才納入這段。
-<!-- /agent -->
-```
-
-生成時：只納入「給自己」或「未標記（共用）」的內容，跳過標記給別人的段落。
-
-**限制：`agent-targeting` 標記只允許出現在 core 頂層檔。** 子資料夾的細節檔必須 **agent-neutral**——細節檔是 agent 共用、近乎逐字複製（§2、§3.6），若把標記放進細節檔，Claude 與 Codex 兩次生成會把同一份 `agent-context/` 覆蓋成不同版本。
-
-**細節檔暫不支援 agent-specific。** 真的需要某段只給某 agent 時，把它放回 **core 頂層檔**、用上面的 `agent: …` 標記，不要放進細節檔。（agent-specific 細節檔之後若有需求再設計，目前刻意不支援以避免規格矛盾。）
-
----
+由使用者授權另行修改 source：純措辭差異可合併為中立表達；真正的平台規範移到其原生入口，再從新 source snapshot 生成。既有鎖版專案不自動更新或批次遷移。
 
 ## 8. 重生 checklist
 
-- [ ] 確認 scope 與輸出路徑正確（§1）；全域 source root = `~/agent-rules/source/`（只讀 `source/`，不掃 repo 第一層 output）
-- [ ] 全域 scope：確認 source root 無子資料夾（core-only）、output 不在 source root；專案 scope：細節檔輸出到 `agent-context/`（§1）
-- [ ] 讀完該 scope 所有 source（§2、§3.2）
-- [ ] 專案：已讀 `generate.md` 且其覆寫優先於本檔（§3.3）
-- [ ] 套用正確 agent profile（§4）
-- [ ] core 依檔名排序內嵌、保留語意未改寫規則（§0、§3.5）
-- [ ] 產出未夾帶 provenance 敘事（model／session／日期身世、「已生效」等狀態）；source 若有已濾掉（§0）
-- [ ] 根檔大小在預算內（§2）——超標已拆檔或停下提醒
-- [ ] 專案細節檔已拆到 `agent-context/`，未碰專案根既有同名資料夾，根檔用相對連結指向（§3.6）
-- [ ] 既有 `manual` 區塊已原樣保留、未對擁有區做差異偵測（§5）
-- [ ] 每個生成檔頂部有 banner（§5）
-- [ ] 專案輸出沒有重抄全域內容（§1）
-- [ ] 已回報產出/保留/大小摘要（§3.9）
+- [ ] Scope、source root、實體輸出位置、core-only、source-only 與專案不重抄全域符合 §1–§2。
+- [ ] 同批完整 snapshot、checksum、唯讀狀態、pre-run bytes／不存在與路徑狀態已落檔並保留（§3.2）。
+- [ ] 工具檔排除、排序、索引與讀取時機正確；超標停止，未自行刪改或搬移 source（§2）。
+- [ ] 固定產出共用內容與 import 入口；targeting 零命中，首次轉換 manual 的共用性已確認（§3.4、§7）。
+- [ ] 所有 source 義務在共用檔與 Claude 展開內容一致；未加身世敘事、平台改寫或自動生成專屬設定（§0、§4）。
+- [ ] 原檔及候選 banner、manual 配對／順序／bytes、ownership、orphan 與接管授權符合 §3.6–§3.8、§5；未自動刪 orphan。
+- [ ] 機械 gate 與獨立語意 review 分開通過；任何疑點零寫入（§3.8）。
+- [ ] source/output 無 drift 後才整批寫入；失敗按 snapshot 恢復所有候選 pre-run state，不用 Git 恢復（§3.9）。
+- [ ] fresh-context verifier 有機制性唯讀限制，已逐項回讀；否則明列未驗證（§3.10）。
+- [ ] 已回報更新／保留／刪除、共用及展開大小、backup 與實際載入狀態；未把檔案存在當 runtime 驗證。

@@ -1,80 +1,60 @@
 # agent-rules
 
-一套讓 **Claude** 與 **Codex**（未來可擴充其他 agent）共用同一份規則來源、再各自產出符合自己平台慣例設定檔的系統。
+讓 Claude Code 與 Codex 共用規則。**新的一般專案直接維護 `AGENTS.md`，`CLAUDE.md` 引用它，不必生成兩份規則。**
 
-## 核心心智模型
+## 一般專案：兩個檔案就開始
 
-> **source 是唯一真相，agent 自己當 compiler。**
+1. 將 [templates/project/](templates/project/) 裡的兩個檔案放到專案根目錄，填入專案目標、實際驗證方式與重要約定，刪掉未使用的 placeholder。
+2. 日常只改 `AGENTS.md`；詳細資料連到既有文件，寫明「處理什麼事情時讀」。不必另外複製到 `agent-context/`。
+3. 不重抄全域偏好，不加入 agent 能從專案直接看出的通則。既有檔先比較，不用模板覆蓋；已有 generated banner 或生成流程的專案繼續使用下方生成模式。
 
-你只維護一份中立的 source。用 Claude 時，叫 Claude 讀 source、產出符合 Claude 慣例的 `CLAUDE.md`；用 Codex 時，叫 Codex 產出 `AGENTS.md`。生成不頻繁——通常一次，之後只在 retro 時回頭調整 source。
-
-## 設定分層（五層模型）
-
-agent 設定可分五層。**本系統只生成前兩層（Instruction + Context）**；其餘三層是各 agent 自己設定的**相鄰層、本系統不生成**。
-
-| Layer | 本系統 | Claude | Codex |
-|---|---|---|---|
-| Instruction（常駐工作指令） | ✅ 生成 | `CLAUDE.md` | `AGENTS.md` |
-| Context（按需 / 路徑範圍） | ✅ 生成 `agent-context/`；path-scoping 為手動選項 | `agent-context`(on-demand) + `.claude/rules/`(glob，路徑觸發) | `agent-context`(on-demand) + nested `AGENTS.md`/`override`(目錄範圍) |
-| Runtime（強制 / 權限 / hook） | ❌ | `settings.json`(權限, hooks) | `hooks.json`/`config.toml`(hooks, sandbox, approval) + execpolicy `rules` |
-| Memory（自累積學習） | ❌；長存規則回灌 source | auto memory | `[memories]` |
-| Workflow（可重複能力） | ❌ | skills / commands | `.agents/skills` / plugins |
-
-- **`@import` 不算 Context**：Claude `@import` 是 eager（啟動即載入）＝等同內嵌進 Instruction，不是 on-demand；progressive disclosure 一律用一般 markdown 連結指向 `agent-context/`。
-- **path-scoping 是手動選項**：Claude `.claude/rules/`（可 glob）↔ Codex nested `AGENTS.md` / `AGENTS.override.md`（目錄範圍）都**不由本系統生成**，需要時自行建立。兩機制不等價（glob 可跨目錄、nested 限所在目錄），跨目錄規則的降級策略見 `GENERATE.md` §4。
-- **同名不同物**：Codex `rules`（execpolicy 權限，Runtime 層）≠ Claude `.claude/rules/`（路徑範圍指令，Context 層）。
-- **skills / plugins** 屬 Workflow 層；其安裝、快取、載入位置屬 **tool-specific，不由本系統生成或管理**。
-- **「什麼放哪」的決策表** canonical 在 `GENERATE.md §0`（要強制 → hook；要 path-scoped → 手動 rules/nested；個人偏好 → memory…）。
-
-## 兩個 scope
-
-| scope | source root 位置 | 產出 |
-|---|---|---|
-| 全域 | `~/agent-rules/source/` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`（**僅根檔，core-only**） |
-| 專案 | `<專案>/agent-rules/` | `<專案>/CLAUDE.md`、`<專案>/AGENTS.md`；細節檔 → `<專案>/agent-context/`（avoid 覆蓋 repo 既有資料夾） |
-
-全域只放「我是誰、角色設定、通用 AI 語氣、產出規範」這類很 general 的東西；專案只放專案特有規則。**兩者不重複**——Claude 與 Codex 原生就會自動合併「全域 + 專案」的設定檔。
-
-> **全域 source root 是 `~/agent-rules/source/`**：`~/agent-rules/` 是跨裝置部署 repo，第一層放生成 output（`CLAUDE.md`/`AGENTS.md`）+ `install.sh`，source 收進 `source/`。generator 只讀 `source/`，避免把 output 當 core 內嵌污染。詳見「跨裝置部署」。
-> **全域 = core-only**：全域 output 走 symlink 跨裝置同步，故 `source/` 內不放子資料夾。按需材料只用在專案 scope。
-
-## source 佈局（資料夾即分類）
-
-`agent-rules/` 底下，除了生成指令檔，**位置決定命運**：
-
-規則只有兩條：**頂層 `.md` = 內嵌核心；任何子資料夾 = 按需材料**。
-
-```
-<scope>/agent-rules/
-  generate.md            # 生成指令（全域是 GENERATE.md，專案是 generate.md）
-  agent-rules.md   ┐ 頂層 .md = core
-  behavior.md      ┘ → 內容「內嵌」進根檔 CLAUDE.md / AGENTS.md
-  <任意資料夾>/*.md       → 拆成 <專案>/agent-context/<同名>/ 的獨立檔，根檔只放索引連結（僅專案 scope）
+```text
+專案/
+  AGENTS.md     # 共用規則原稿，直接修改
+  CLAUDE.md     # 一行 @AGENTS.md
+  docs/         # 可選，沿用既有詳細資料
 ```
 
-- **頂層檔 = 常駐核心**：每次對話都會被讀進 context，所以保持精簡。例外：`GENERATE.md`、`generate.md`、`README.md`、`CHANGELOG.md`、`GENERATE.vendored.md`（及任何 `*.vendored.md`）是說明/指令/vendored 規格，**不**內嵌。建議 core 用數字前綴（`00-`、`10-`…）固定內嵌順序，並控制根檔大小（見 `GENERATE.md` §2 大小預算）。
-- **任何子資料夾 = 按需材料**（**僅專案 scope**）：資料夾名稱**隨你定**（`wiki/`、`reference/`、`playbooks/`… 不限），各檔拆成 `<專案>/agent-context/<同名>/` 的獨立檔（收進 namespace，避免覆蓋 repo 既有的 `wiki/`、`docs/`）。平常不佔 context，根檔只留一行「需要時看 X」，agent 真的需要才去讀（progressive disclosure）。全域 scope 不放子資料夾。
+`@AGENTS.md` 會把共用規則載入 Claude 的 context，省的是維護兩份規則的工作，不是 token。按需文件用一般 Markdown 連結；兩平台的載入行為見 [Claude 官方文件](https://code.claude.com/docs/en/memory#agentsmd)與 [OpenAI 官方文件](https://learn.chatgpt.com/docs/agent-configuration/agents-md)（查閱：2026-09-15）。
 
-## 怎麼用
+本 repo 自己的 `AGENTS.md` / `CLAUDE.md` 就使用這個方式。它們不是生成副本，直接維護的 `AGENTS.md` 本身就是原稿。
 
-1. **第一次設定全域**：把 `templates/global-agent-rules/` 複製到 `~/agent-rules/`，把 `GENERATE.md` 放進 `~/agent-rules/source/`，填好 `source/role.md`、`source/tone.md`，叫 agent「依 `~/agent-rules/source/GENERATE.md` 生成全域設定檔」，再跑 `~/agent-rules/install.sh` 建 symlink。詳見「跨裝置部署」。
-2. **某個專案要規則**：把 `templates/project-agent-rules/` 複製成 `<專案>/agent-rules/`，並把 base 規格 `GENERATE.md` vendor 一份進去（`agent-rules/GENERATE.vendored.md`，檔頭註明來源 commit——因為 `ai-rules` 是 private repo，vendored 才能離線/無 auth 使用）。編輯 source，然後叫 agent「依本專案 `agent-rules/generate.md` 生成」。
-3. **要調整**：改 source → 重新叫 agent 生成。詳見 `GENERATE.md` 的「重生」與「迭代回路」章節。
+## 全域與既有專案：生成模式
+
+已有獨立 source、manual 區塊或部署流程時，保留生成模式。**只改 source，再生成；不從輸出反向回灌，也不自動改成直接維護。** 轉換既有專案須另外確認 source、manual 與所有平台專屬內容的去處。
+
+- **建立全域規則**：使用 [global-agent-rules 模板](templates/global-agent-rules/README.md)，填入全域 source，再依其生成與部署流程設定。
+- **建立需生成的專案**：使用 [project-agent-rules 模板](templates/project-agent-rules/generate.md)，複製成專案的 `agent-rules/`；把本 repo 的 `GENERATE.md` 以指定 commit 鎖版為 `GENERATE.vendored.md`，依 `generate.md` 執行。
+- **只生成一次**：任一 agent 產出共用 `AGENTS.md` 與 Claude import 入口。舊 targeting 須先遷移；既有鎖版專案不自動更新。
+- **修改與驗收**：source 佈局、scope、平台差異、manual 保留與 checklist 只以 [GENERATE.md](GENERATE.md) 為準。一般專案不需要讀它。
 
 ## 跨裝置部署
 
-全域 output 跨裝置完全一致，所以**不該每台重生**——把 `~/agent-rules` 設成**私有 git repo**，output commit 進去、用 symlink 同步：
+這一節適用全域生成模式。個人資料留在私有部署 repo，本系統 repo 保持中立。
 
-- **佈局**：`~/agent-rules/` 第一層放 `CLAUDE.md`、`AGENTS.md`（生成 output）+ `install.sh`；source 在 `source/`（`GENERATE.md`、`role.md`、`tone.md`）；另可放 `skills/`（選配，Workflow 層資產，generator 不讀）。
-- **install.sh**：把第一層 output symlink 到 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`；若有 `skills/`，把含 `SKILL.md` 的資料夾 symlink 到兩個 agent 的 skills 目錄（idempotent，遇實體檔先備份）。
-- **新裝置一鍵**：`git clone git@github.com:<you>/agent-rules.git ~/agent-rules && ~/agent-rules/install.sh`，**不需重生**。
-- **日常同步**：來源裝置改 source → 重生（指向 `source/GENERATE.md`）→ `git push`；其他裝置 `git pull` 即生效（symlink 自動跟隨）。
-- **這個系統 repo（`ai-rules`）與個人全域 repo（`~/agent-rules`）分開**：前者放範本/規格、不含個資；後者含 role/tone、必須私有。
+- 部署 repo 的 `source/` 放規則原稿與生成規格，repo 第一層放共用 output、Claude 入口及 `install.sh`；output 不放進 source。
+- `install.sh` 將共用檔連到 `~/.codex/AGENTS.md`、`~/.claude/AGENTS.md`，入口連到 `~/.claude/CLAUDE.md`。首次遷移時，各裝置重跑安裝器；只更新規則用 `--rules-only`。選配 skills 由安裝器處理，generator 不讀。
+- 來源裝置改 source、生成並同步 Git；其他裝置 pull 即取得 outputs，不必各自重生。第一次 clone 與安裝步驟見 [全域模板](templates/global-agent-rules/README.md)。
+- 更新生成規格前先比較部署版，不可覆蓋部署端新增的 snapshot、寫入 gate 或失敗恢復；專案 vendored 版本另行更新。
+- 專案的規則與相關文件隨專案 Git 同步，不需要全域安裝器。
 
-> **專案 scope 不需這套**：專案的 `CLAUDE.md`/`AGENTS.md`/`agent-context/` 直接 commit 進各專案自己的 repo，新裝置 clone 專案時一起帶過來，不需重生。
+## 設定分層（五層模型）
+
+這是參考分類，不是使用前必讀步驟。生成模式只產出前兩層；其他能力依各平台設定，安裝與載入位置不由 generator 管理。
+
+| Layer | 本系統 | Claude | Codex |
+|---|---|---|---|
+| Instruction（常駐指令） | 提供模板；生成模式可產出 | `CLAUDE.md` | `AGENTS.md` |
+| Context（按需 / 路徑範圍） | 直接連既有資料；生成模式產出 `agent-context/` | 一般連結；手動 `.claude/rules/` | 一般連結；手動 nested `AGENTS.md` / `AGENTS.override.md` |
+| Runtime（權限 / hook） | 不生成 | 平台設定 | 平台設定與 execpolicy rules |
+| Memory（累積學習） | 不生成，不作生成來源 | 平台 memory | 平台 memory |
+| Workflow（可重複能力） | 不生成 | skills / commands / plugins | skills / plugins |
+
+Claude glob 與 Codex 目錄分層不是同一機制；Codex execpolicy rules 也不是 Claude `.claude/rules/`。生成模式的放置表與差異只維護在 [GENERATE.md](GENERATE.md) §0、§4。
 
 ## 檔案
 
-- `GENERATE.md` — 系統的核心：完整生成規格、各 agent profile、擁有區機制、迭代回路。**所有行為以此為準。**
-- `templates/global-agent-rules/` — 部署到 `~/agent-rules/` 的骨架。
-- `templates/project-agent-rules/` — 複製進任一專案的骨架（含範例 core / wiki / reference）。
+- [templates/project/](templates/project/)：一般專案的預設入口。
+- [GENERATE.md](GENERATE.md)：生成模式的唯一規格。
+- [templates/project-agent-rules/](templates/project-agent-rules/) 與 [templates/global-agent-rules/](templates/global-agent-rules/)：既有生成模式的模板。
+- [docs/design-log.md](docs/design-log.md)：歷史決策，append-only；不作日常指令入口。

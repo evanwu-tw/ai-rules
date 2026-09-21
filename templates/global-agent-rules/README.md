@@ -1,54 +1,43 @@
 # 全域 agent-rules 骨架
 
-這個資料夾是**全域部署 repo** 的骨架。部署後，`~/agent-rules` 是一個**私有 git repo**，跨裝置同步你的全域 agent 設定。
+用私有部署 repo 同步全域規則。只維護 source，任一 agent 生成一次，兩平台共用同一份內容。
 
-## 佈局
-
-```
-~/agent-rules/              # 私有 git repo（部署殼）
-  install.sh               # 建立 symlink 的部署器
-  CLAUDE.md               # 生成 output（symlink target）← 第一層
-  AGENTS.md              # 生成 output（symlink target）← 第一層
-  source/                  # source root（core-only、扁平）
-    GENERATE.md           # 從本系統根目錄複製過來；全域的生成指令即此檔
-    role.md               # core：我是誰、角色設定
-    tone.md               # core：通用 AI 語氣與產出規範
-  skills/                  # （選配）Workflow 層資產；install.sh 部署、generator 不讀
-    <skill-name>/SKILL.md
-  .gitignore
+```text
+agent-rules/
+  install.sh
+  AGENTS.md             # 共用生成本文
+  CLAUDE.md             # generated banner + @AGENTS.md；保留原 manual
+  source/
+    GENERATE.md         # 複製系統 repo 的生成規格
+    role.md
+    tone.md
+  skills/               # 選配，不是生成來源
 ```
 
-> **為什麼 source 要收進 `source/`、output 放第一層？**
-> 全域 generator 把 source root 頂層的 `.md` 都當 core 內嵌。若 output（`CLAUDE.md`/`AGENTS.md`）和 source 同層，重生會把舊 output 當 core 又塞回去 → 自我參照污染。所以 source 收進 `source/`（generator 只讀這裡），第一層只放 output 與部署檔。
->
-> **全域 = core-only：`source/` 內不放子資料夾。** 全域 output 以 symlink 跨裝置同步，根檔指向子資料夾的相對路徑在 symlink 下不穩；按需材料（wiki/reference 等）只用在專案 scope。
->
-> **skills 可以住在部署殼（選配）**：`skills/` 是 Workflow 層資產、不是 source——generator 只讀 `source/`、永不讀 `skills/`，所以不會污染生成。install.sh 會把含 `SKILL.md` 的資料夾 symlink 到 `~/.claude/skills/`、`~/.codex/skills/`，讓「全域規則＋skills」一次 clone、一次安裝、跨裝置同步。
+全域 source 僅允許頂層 core。output 必須在部署 repo 第一層，避免重生時被當成 source。完整生成與保護規則以系統 [GENERATE.md](../../GENERATE.md) 為準。
 
-## 第一次設定（來源裝置）
+## 第一次設定
 
-1. 把本資料夾內容複製到 `~/agent-rules/`，並把系統根目錄的 `GENERATE.md` 複製到 `~/agent-rules/source/GENERATE.md`。
+1. 把此骨架複製到自己的私有部署 repo，並將系統 `GENERATE.md` 複製至 `source/GENERATE.md`。
 2. 填好 `source/role.md`、`source/tone.md`。
-3. 叫 agent 生成（**指令路徑指向 `source/`**）：
-   > 「依 `~/agent-rules/source/GENERATE.md` 生成全域設定檔。」
-   - 用 Claude → 產出 `~/.claude/CLAUDE.md`
-   - 用 Codex → 產出 `~/.codex/AGENTS.md`
-4. 跑 `~/agent-rules/install.sh`，把 output symlink 到 `~/.claude/`、`~/.codex/`。
-5. `git init` → commit → push 到你的**私有** remote（例 `git@github.com:<you>/agent-rules.git`）。
+3. 請任一 agent 依 `source/GENERATE.md` 生成全域設定。一次產出 repo 第一層的共用 `AGENTS.md` 與 Claude 引用入口；不要經平台 symlink 寫入，也不用另一個 agent 再生成一次。
+4. 執行 `bash install.sh`，建立以下三個連結：
 
-## 換裝置 / 新裝置（一鍵）
+| 平台位置 | 部署 repo 目標 |
+|---|---|
+| `~/.codex/AGENTS.md` | `AGENTS.md` |
+| `~/.claude/AGENTS.md` | `AGENTS.md` |
+| `~/.claude/CLAUDE.md` | `CLAUDE.md` |
 
-```sh
-git clone git@github.com:<you>/agent-rules.git ~/agent-rules && ~/agent-rules/install.sh
-```
+Claude 目錄內的共用連結確保相對 import 可解析。被替換的檔案或連結保存在 `~/.agent-rules-backups/`；核心連結安裝失敗會嘗試恢復並回報。選配 skills 的既有部署流程不屬於此核心交易。
 
-完成，**不需重生**。
+- `bash install.sh --rules-only`：只部署上述連結，不動 skills。
+- `bash install.sh --target-home /path/to/test-home --rules-only`：在指定目錄測試，不改 `HOME`。
 
-## 日常同步
+## 跨裝置與日常維護
 
-- 改了設定 → 在來源裝置重生（指向 `~/agent-rules/source/GENERATE.md`）→ `git commit && git push`。
-- 其他裝置 → `git pull`，symlink 自動跟隨，立即生效。
+同步私有部署 repo 到其他裝置後執行安裝器，不必重新生成。首次改用 import 時，各裝置都要重跑一次安裝器。
 
-> **caveat**：重生時 generator 寫 `~/.claude/CLAUDE.md`（symlink → repo 第一層）。多數寫入會保留 symlink；若某次把 symlink 換成實體檔，repo 第一層不會更新。重生後 `git status` 檢查，必要時把實體檔內容移回第一層、重跑 `install.sh`。
+平常修改 source，再由任一 agent 生成與驗收。提交並同步私有 repo 後，其他裝置 pull 即取得相同本文。`@import` 省下重複維護，不減少載入本文的 token。
 
-全域只放非常 general 的東西（角色、語氣、產出規範），通常設定一次後極少再動。
+已有 targeting 或 manual 的部署先依生成規格遷移，不能直接丟掉差異。更新 `source/GENERATE.md` 前先比較並保留部署端安全要求。平台專屬規範依生成規格 §4 手動設定，有實際差異才新增。

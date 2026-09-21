@@ -1,7 +1,7 @@
 # ai-rules 專案指引
 
 - 這份檔案只是進入本 repo 工作時的薄入口，不是第二份規格。
-- root `GENERATE.md` 是 agent-rules 生成行為的唯一權威；改規格就改它。
+- 一般專案以 `templates/project/` 為預設；root `GENERATE.md` 只規範生成模式，是生成行為的唯一權威。
 - `README.md` 說明五層分層模型與兩個 scope，供人閱讀。
 - `docs/design-log.md` 是 append-only 決策紀錄；新增章節，不改寫舊決策。
 - 遵守 canonical-per-table：同一張表或規則只存在一處，其餘文件用連結指過去。
