@@ -1,6 +1,6 @@
 # 通用 AI 語氣與產出規範（core）
 
-> 全域 core。會被內嵌進 `~/.claude/CLAUDE.md` 與 `~/.codex/AGENTS.md`。
+> 全域 core。生成進部署 repo 的 `AGENTS.md`，Claude 經 `CLAUDE.md` 引用。
 
 ## 語氣
 

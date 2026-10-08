@@ -33,6 +33,7 @@
 這一節適用全域生成模式。個人資料留在私有部署 repo，本系統 repo 保持中立。
 
 - 部署 repo 的 `source/` 放規則原稿與生成規格，repo 第一層放共用 output、Claude 入口及 `install.sh`；output 不放進 source。
+- 全域不生成 `agent-context/`。按需細節放部署 repo 的 `docs/ops/`，手寫維護，由 core 寫明讀取觸發；歷史與備份放 `_archive/`。三層分工見[全域模板](templates/global-agent-rules/README.md#三層內容)。
 - `install.sh` 將共用檔連到 `~/.codex/AGENTS.md`、`~/.claude/AGENTS.md`，入口連到 `~/.claude/CLAUDE.md`。首次遷移時，各裝置重跑安裝器；只更新規則用 `--rules-only`。選配 skills 由安裝器處理，generator 不讀。
 - 來源裝置改 source、生成並同步 Git；其他裝置 pull 即取得 outputs，不必各自重生。第一次 clone 與安裝步驟見 [全域模板](templates/global-agent-rules/README.md)。
 - 更新生成規格前先比較部署版，不可覆蓋部署端新增的 snapshot、寫入 gate 或失敗恢復；專案 vendored 版本另行更新。

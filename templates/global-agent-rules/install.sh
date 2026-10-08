@@ -114,14 +114,33 @@ if [ "$RULES_ONLY" -eq 1 ]; then echo "Done. Rules only; skills unchanged."; exi
 # skills（Workflow 層資產；generator 不讀這裡）：只連含 SKILL.md 的資料夾
 # Codex 官方 user 層 skills 位置是 ~/.agents/skills/（developers.openai.com/codex/skills）；
 # ~/.codex/skills/ 官方文件未提及，僅作舊版相容而保留，確認不需要可自行拿掉該行。
+# 選用的 frontmatter 欄位 `hosts:`（空白分隔，值為 claude / codex）可限定 skill 只部署給
+# 特定宿主——跨模型呼叫類 skill（A 叫 B）不該讓 B 自己看到。沒寫 = 全部宿主。
 if [ -d "$REPO_DIR/skills" ]; then
   for skill in "$REPO_DIR"/skills/*/; do
     [ -f "${skill}SKILL.md" ] || continue
     name="$(basename "$skill")"
-    link "${skill%/}" "$TARGET_HOME/.claude/skills/$name"
-    link "${skill%/}" "$TARGET_HOME/.agents/skills/$name"
-    link "${skill%/}" "$TARGET_HOME/.codex/skills/$name"
+    # 只在 frontmatter（第一組 --- 之間）找 hosts:，避免掃到內文範例；未知值警告不靜默
+    hosts="$(awk '/^---$/{n++; next} n==1 && sub(/^hosts:[[:space:]]*/, ""){print; exit}' "${skill}SKILL.md")"
+    [ -z "$hosts" ] && hosts="claude codex"
+    for h in $hosts; do
+      case "$h" in claude|codex) ;; *) echo "WARNING: $name 的 hosts 含未知值 '$h'（只認 claude / codex），該值不會部署" >&2 ;; esac
+    done
+    case " $hosts " in *" claude "*) link "${skill%/}" "$TARGET_HOME/.claude/skills/$name" ;; esac
+    case " $hosts " in *" codex "*)
+      link "${skill%/}" "$TARGET_HOME/.agents/skills/$name"
+      link "${skill%/}" "$TARGET_HOME/.codex/skills/$name" ;;
+    esac
   done
+fi
+
+# GENERATE.md 同步檢查（選配）：設定 AI_RULES_SPEC 指向系統 repo 的 GENERATE.md 才會比對。
+# 不一致代表有一側改了沒同步——只警告、不自動覆蓋，方向由人判斷。
+if [ -n "${AI_RULES_SPEC:-}" ] && [ -f "$AI_RULES_SPEC" ] && ! diff -q "$REPO_DIR/source/GENERATE.md" "$AI_RULES_SPEC" >/dev/null 2>&1; then
+  echo "" >&2
+  echo "WARNING: source/GENERATE.md 與系統 repo 的 GENERATE.md 不一致" >&2
+  echo "  查差異：diff '$REPO_DIR/source/GENERATE.md' '$AI_RULES_SPEC'" >&2
+  echo "  先比較並保留安全要求，再同步規格；不要直接覆蓋其中一側。" >&2
 fi
 
 echo "Done. 全域 agent 設定與 skills 已透過 ~/agent-rules 同步（git pull 即更新）。"

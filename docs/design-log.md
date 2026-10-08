@@ -341,3 +341,12 @@
 - 保留 snapshot、雙重寫入 gate、完整 drift 檢查、交易恢復與獨立機制性唯讀驗證。Claude coverage 與大小按 import 展開內容驗收。
 - 全域部署增加 Claude 目錄內的共用檔連結，安裝器支援隔離目錄、只部署規則、備份與核心連結失敗恢復。既有 skills 部署保留。
 - 專屬規範有需要才使用平台原生設定；Codex execpolicy rules 不作 Markdown 指令。共用內容減少維護分歧，不保證兩模型行為一致，也不節省本文 context。
+
+
+## 22. 全域模板對齊部署端架構（2026-10-08）
+
+- 部署端（2026-09-26 起）已形成三層：`source/` 常駐 core、`docs/ops/` 按需 Ops、`_archive/` 歷史與備份。全域 source 維持 core-only，按需細節不生成，改由 core 的讀取觸發指向 Ops。模板補上這個結構與 placeholder，README 加三層分工表。
+- 模板 source 改用排序前綴（`00-role`、`10-tone`），新增 `20-work-dispatch` 放工作原則與讀取觸發。§2 原本就允許前綴，生成規格不變。
+- 模板 `install.sh` 回補部署端已驗證的兩項：skill frontmatter `hosts:` 限定部署平台；`GENERATE.md` 同步檢查。後者改為設定 `AI_RULES_SPEC` 才比對，不寫死本機路徑。
+- 模板新增 `.gitignore`，排除 `_archive/backups/`。`tests/` 只在樹狀圖標為選配。
+- 本次不改 `GENERATE.md`，兩邊仍一致；不改部署端檔案，也不重生 outputs。
