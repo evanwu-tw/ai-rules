@@ -56,6 +56,7 @@ Claude glob 與 Codex 目錄分層不是同一機制；Codex execpolicy rules �
 ## 檔案
 
 - [templates/project/](templates/project/)：一般專案的預設入口。
+- [專案 change 工作流程初版](docs/workflows/project-change-workflow.md)：供新專案按需評估的手寫指南，尚非預設規則。
 - [GENERATE.md](GENERATE.md)：生成模式的唯一規格。
 - [templates/project-agent-rules/](templates/project-agent-rules/) 與 [templates/global-agent-rules/](templates/global-agent-rules/)：既有生成模式的模板。
 - [docs/design-log.md](docs/design-log.md)：歷史決策，append-only；不作日常指令入口。
