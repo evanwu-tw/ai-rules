@@ -47,9 +47,9 @@ flowchart LR
 ## Portfolio 有限試跑
 
 - [EVA-18](https://linear.app/evanccw/issue/EVA-18/讓鍵盤焦點展開-work-card-摘要) 與 [EVA-19](https://linear.app/evanccw/issue/EVA-19/mobile-nav-按-escape-關閉) 的 brief、spec、code、issue 可互相定位，成果收在 [PR #1](https://github.com/evanwu-tw/Portfolio-website/pull/1)。EVA-18 由 Codex 執行，Claude 冷讀後接手並主導 EVA-19；[EVA-17 試跑紀錄](https://linear.app/evanccw/issue/EVA-17/試跑-portfolio-文件路由與-changes-brief-架構)回報冷讀補問 0 次、EVA-19 返工 0 次，但早期未提交的多 issue diff 曾混在同一工作樹。
-- [EVA-23](https://linear.app/evanccw/issue/EVA-23/加入-skip-to-content-連結讓鍵盤跳過導覽) 由 Claude 先寫 brief 並交接，Codex 冷讀後實作，留下 commit 與 [PR #2](https://github.com/evanwu-tw/Portfolio-website/pull/2)。接手時發現 brief 底部的 branch／HEAD 已過期，靠最新 issue 紀錄、Git 與 PR 辨認現況。2026-10-30 17:57（UTC+8）重查 PR #2：**open，merge status 為 blocked**；issue 為 In Review，視覺審閱尚待完成，不能算已合併或已部署。
+- [EVA-23](https://linear.app/evanccw/issue/EVA-23/加入-skip-to-content-連結讓鍵盤跳過導覽) 由 Claude 先寫 brief 並交接，Codex 冷讀後實作，留下 commit 與 [PR #2](https://github.com/evanwu-tw/Portfolio-website/pull/2)。接手時發現 brief 底部的 branch／HEAD 已過期，靠最新 issue 紀錄、Git 與 PR 辨認現況。Evan 已確認手機與桌機樣式；PR #2 於 2026-11-03 合併至 `main`（[merge commit](https://github.com/evanwu-tw/Portfolio-website/commit/e0e7640dc17d46a4b3b1cafd4db057b8f3820177)），issue 為 Done。先前 2026-10-30 的 `mergeStatus: blocked` 是過期或不準確的訊號，具體成因未確認；部署狀態未驗證。
 
-這些紀錄支持「在三次小型行為變更中可交接、可追溯」，不支持「長期文件維護成本已下降」。樣本少、類型接近，且 EVA-23 尚未收尾；低補問也可能來自變更範圍小或執行者已熟悉專案。下一個專案應記錄每次找資料、寫／同步文件、補問與返工所花時間，並檢查較複雜的變更中，舊快照或多 issue 工作樹是否再次造成誤判。
+這些紀錄支持「在三次小型行為變更中可交接、可追溯」，不支持「長期文件維護成本已下降」。樣本少、類型接近；低補問也可能來自變更範圍小或執行者已熟悉專案。下一個專案應記錄每次找資料、寫／同步文件、補問與返工所花時間，並檢查較複雜的變更中，舊快照或多 issue 工作樹是否再次造成誤判。
 
 ## 與 OpenSpec、Spec Kit 的關係
 
